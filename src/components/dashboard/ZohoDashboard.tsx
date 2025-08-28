@@ -50,11 +50,12 @@ interface ZohoDashboardProps {
   createInitialJobState: () => JobState;
   onAddProfile: () => void;
   onEditProfile: (profile: Profile) => void;
+  onDeleteProfile: (profileName: string) => void;
 }
 
 const SERVER_URL = "http://localhost:3000";
 
-export const ZohoDashboard: React.FC<ZohoDashboardProps> = ({ jobs, setJobs, createInitialJobState, onAddProfile, onEditProfile, socket: socketProp }) => {
+export const ZohoDashboard: React.FC<ZohoDashboardProps> = ({ jobs, setJobs, createInitialJobState, onAddProfile, onEditProfile, socket: socketProp, onDeleteProfile }) => {
   const { toast } = useToast();
   const [socket, setSocket] = useState<Socket | null>(socketProp);
   
@@ -329,6 +330,7 @@ export const ZohoDashboard: React.FC<ZohoDashboardProps> = ({ jobs, setJobs, cre
             onManualVerify={handleManualVerify}
             socket={socket}
             onEditProfile={onEditProfile}
+            onDeleteProfile={onDeleteProfile}
           />
           {currentJob && (
             <>

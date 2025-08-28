@@ -48,11 +48,12 @@ interface PageContext {
 interface EmailStaticsProps {
   onAddProfile: () => void;
   onEditProfile: (profile: Profile) => void;
+  onDeleteProfile: (profileName: string) => void;
 }
 
 const SERVER_URL = "http://localhost:3000";
 
-const EmailStatics: React.FC<EmailStaticsProps> = ({ onAddProfile, onEditProfile }) => {
+const EmailStatics: React.FC<EmailStaticsProps> = ({ onAddProfile, onEditProfile, onDeleteProfile }) => {
   const { toast } = useToast();
   const socketRef = useRef<Socket | null>(null);
   const [activeProfileName, setActiveProfileName] = useState<string | null>(null);
@@ -207,6 +208,7 @@ const EmailStatics: React.FC<EmailStaticsProps> = ({ onAddProfile, onEditProfile
               onManualVerify={handleManualVerify}
               socket={socketRef.current}
               onEditProfile={onEditProfile}
+              onDeleteProfile={onDeleteProfile}
             />
 
             <Card>

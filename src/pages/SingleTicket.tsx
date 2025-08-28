@@ -39,6 +39,7 @@ interface EmailFailure {
 interface SingleTicketProps {
     onAddProfile: () => void;
     onEditProfile: (profile: Profile) => void;
+    onDeleteProfile: (profileName: string) => void;
 }
 
 const SERVER_URL = "http://localhost:3000";
@@ -131,7 +132,7 @@ const ImageToolDialog = ({ onApply }: { onApply: (html: string) => void }) => {
 };
 
 
-const SingleTicket: React.FC<SingleTicketProps> = ({ onAddProfile, onEditProfile }) => {
+const SingleTicket: React.FC<SingleTicketProps> = ({ onAddProfile, onEditProfile, onDeleteProfile }) => {
   const { toast } = useToast();
   const [activeProfileName, setActiveProfileName] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<ApiStatus>({ status: 'loading', message: 'Connecting to server...' });
@@ -422,11 +423,10 @@ const SingleTicket: React.FC<SingleTicketProps> = ({ onAddProfile, onEditProfile
             onProfileChange={handleProfileChange}
             apiStatus={apiStatus}
             onShowStatus={() => setIsStatusModalOpen(true)}
-            onFetchFailures={handleFetchEmailFailures}
             onManualVerify={handleManualVerify}
             socket={socket}
-            onClearTicketLogs={handleClearTicketLogs}
             onEditProfile={onEditProfile}
+            onDeleteProfile={onDeleteProfile}
           />
 
           <Card className="shadow-medium hover:shadow-large transition-all duration-300">

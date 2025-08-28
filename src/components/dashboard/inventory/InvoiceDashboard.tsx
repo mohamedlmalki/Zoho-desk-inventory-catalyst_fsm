@@ -16,24 +16,26 @@ type ApiStatus = {
   fullResponse?: any;
 };
 
-interface ZohoDashboardProps {
+interface InvoiceDashboardProps {
   jobs: InvoiceJobs;
   setJobs: React.Dispatch<React.SetStateAction<InvoiceJobs>>;
   socket: Socket | null;
   createInitialJobState: () => InvoiceJobState;
   onAddProfile: () => void;
   onEditProfile: (profile: Profile) => void;
+  onDeleteProfile: (profileName: string) => void;
 }
 
 const SERVER_URL = "http://localhost:3000";
 
-export const InvoiceDashboard: React.FC<ZohoDashboardProps> = ({ 
+export const InvoiceDashboard: React.FC<InvoiceDashboardProps> = ({ 
     jobs, 
     setJobs, 
     socket, 
     createInitialJobState,
     onAddProfile, 
-    onEditProfile 
+    onEditProfile,
+    onDeleteProfile
 }) => {
   const { toast } = useToast();
   const [activeProfileName, setActiveProfileName] = useState<string | null>(null);
@@ -247,6 +249,7 @@ export const InvoiceDashboard: React.FC<ZohoDashboardProps> = ({
           onManualVerify={handleManualVerify}
           socket={socket}
           onEditProfile={onEditProfile}
+          onDeleteProfile={onDeleteProfile}
         />
         
         {currentJob && (

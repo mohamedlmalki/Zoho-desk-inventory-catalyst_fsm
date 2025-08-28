@@ -46,9 +46,10 @@ interface IndexProps {
   createInitialJobState: () => JobState;
   onAddProfile: () => void;
   onEditProfile: (profile: Profile) => void;
+  onDeleteProfile: (profileName: string) => void;
 }
 
-const Index = ({ jobs, setJobs, socket, createInitialJobState, onAddProfile, onEditProfile }: IndexProps) => {
+const Index = ({ jobs, setJobs, socket, createInitialJobState, onAddProfile, onEditProfile, onDeleteProfile }: IndexProps) => {
   return (
     <ZohoDashboard 
       jobs={jobs}
@@ -57,6 +58,7 @@ const Index = ({ jobs, setJobs, socket, createInitialJobState, onAddProfile, onE
       createInitialJobState={createInitialJobState}
       onAddProfile={onAddProfile}
       onEditProfile={onEditProfile}
+      onDeleteProfile={onDeleteProfile}
     />
   );
 };

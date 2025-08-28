@@ -155,6 +155,25 @@ app.put('/api/profiles/:profileNameToUpdate', (req, res) => {
     }
 });
 
+app.delete('/api/profiles/:profileNameToDelete', (req, res) => {
+    try {
+        const { profileNameToDelete } = req.params;
+        const profiles = readProfiles();
+        const initialLength = profiles.length;
+        const newProfiles = profiles.filter(p => p.profileName !== profileNameToDelete);
+
+        if (newProfiles.length === initialLength) {
+            return res.status(404).json({ success: false, error: "Profile not found." });
+        }
+
+        writeProfiles(newProfiles);
+        res.json({ success: true, profiles: newProfiles });
+    } catch (error) {
+        console.error('[ERROR] Deleting profile:', error);
+        res.status(500).json({ success: false, error: "Failed to delete profile." });
+    }
+});
+
 // --- SOCKET.IO CONNECTION HANDLING ---
 io.on('connection', (socket) => {
     console.log(`[INFO] New connection. Socket ID: ${socket.id}`);

@@ -10,6 +10,7 @@ interface BulkInvoicesProps {
   createInitialJobState: () => InvoiceJobState;
   onAddProfile: () => void;
   onEditProfile: (profile: Profile) => void;
+  onDeleteProfile: (profileName: string) => void;
 }
 
 const BulkInvoices = (props: BulkInvoicesProps) => {

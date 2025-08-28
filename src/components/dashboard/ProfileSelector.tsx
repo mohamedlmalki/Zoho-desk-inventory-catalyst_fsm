@@ -3,9 +3,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Building, AlertCircle, CheckCircle, Loader, RefreshCw, Activity, Edit } from 'lucide-react';
+import { User, Building, AlertCircle, CheckCircle, Loader, RefreshCw, Activity, Edit, Trash2 } from 'lucide-react';
 import { Socket } from 'socket.io-client';
 import { Profile, Jobs as TicketJobs, InvoiceJobs } from '@/App';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type ApiStatus = {
     status: 'loading' | 'success' | 'error';
@@ -23,6 +34,7 @@ interface ProfileSelectorProps {
   onManualVerify: () => void;
   socket: Socket | null;
   onEditProfile: (profile: Profile) => void;
+  onDeleteProfile: (profileName: string) => void;
 }
 
 export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
@@ -35,6 +47,7 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
   onManualVerify,
   socket,
   onEditProfile,
+  onDeleteProfile,
 }) => {
 
   const getBadgeProps = () => {
@@ -106,6 +119,29 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
             <Button variant="outline" size="icon" onClick={() => selectedProfile && onEditProfile(selectedProfile)} disabled={!selectedProfile}>
                 <Edit className="h-4 w-4" />
             </Button>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="icon" disabled={!selectedProfile}>
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the
+                            <span className="font-bold"> {selectedProfile?.profileName} </span>
+                            profile.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => selectedProfile && onDeleteProfile(selectedProfile.profileName)}>
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
           </div>
 
           {selectedProfile && (

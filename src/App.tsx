@@ -285,6 +285,23 @@ const MainApp = () => {
         }
     };
 
+    const handleDeleteProfile = async (profileNameToDelete: string) => {
+        try {
+            const response = await fetch(`${SERVER_URL}/api/profiles/${encodeURIComponent(profileNameToDelete)}`, {
+                method: 'DELETE',
+            });
+            const result = await response.json();
+            if (result.success) {
+                toast({ title: `Profile "${profileNameToDelete}" deleted successfully!` });
+                await queryClient.invalidateQueries({ queryKey: ['profiles'] });
+            } else {
+                toast({ title: 'Error', description: result.error, variant: 'destructive' });
+            }
+        } catch (error) {
+            toast({ title: 'Error', description: 'Failed to delete profile.', variant: 'destructive' });
+        }
+    };
+
     return (
         <>
             <BrowserRouter>
@@ -299,6 +316,7 @@ const MainApp = () => {
                                 createInitialJobState={createInitialJobState}
                                 onAddProfile={handleOpenAddProfile}
                                 onEditProfile={handleOpenEditProfile}
+                                onDeleteProfile={handleDeleteProfile}
                             />
                         }
                     />
@@ -308,6 +326,7 @@ const MainApp = () => {
                             <SingleTicket 
                                 onAddProfile={handleOpenAddProfile}
                                 onEditProfile={handleOpenEditProfile}
+                                onDeleteProfile={handleDeleteProfile}
                             />
                         }
                     />
@@ -321,6 +340,7 @@ const MainApp = () => {
                                 createInitialJobState={createInitialInvoiceJobState}
                                 onAddProfile={handleOpenAddProfile}
                                 onEditProfile={handleOpenEditProfile}
+                                onDeleteProfile={handleDeleteProfile}
                            />
                         }
                     />
@@ -330,6 +350,7 @@ const MainApp = () => {
                             <SingleInvoice
                                 onAddProfile={handleOpenAddProfile}
                                 onEditProfile={handleOpenEditProfile}
+                                onDeleteProfile={handleDeleteProfile}
                             />
                         }
                     />
@@ -339,6 +360,7 @@ const MainApp = () => {
                             <EmailStatics
                                 onAddProfile={handleOpenAddProfile}
                                 onEditProfile={handleOpenEditProfile}
+                                onDeleteProfile={handleDeleteProfile}
                             />
                         }
                     />
