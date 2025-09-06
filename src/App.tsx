@@ -11,10 +11,14 @@ import NotFound from "@/pages/NotFound";
 import SingleTicket from "@/pages/SingleTicket";
 import { ProfileModal } from '@/components/dashboard/ProfileModal';
 import BulkInvoices from '@/pages/BulkInvoices';
-import SingleInvoice from '@/pages/SingleInvoice'; // Import the new page
-import EmailStatics from '@/pages/EmailStatics'; // Import the new page
+import SingleInvoice from '@/pages/SingleInvoice';
+import EmailStatics from '@/pages/EmailStatics';
 import { InvoiceResult } from '@/components/dashboard/inventory/InvoiceResultsDisplay';
 import { useJobTimer } from '@/hooks/useJobTimer';
+import BulkSignup from './pages/BulkSignup';
+import SingleSignup from './pages/SingleSignup';
+import ManageUsers from './pages/ManageUsers'; // ADD THIS IMPORT LINE
+
 
 const queryClient = new QueryClient();
 const SERVER_URL = "http://localhost:3000";
@@ -49,6 +53,37 @@ export interface TicketResult {
   fullResponse?: any;
 }
 
+export interface CatalystSignupFormData {
+  emails: string;
+  firstName: string;
+  lastName: string;
+  delay: number;
+}
+export interface CatalystResult {
+  email: string;
+  success: boolean;
+  details?: string;
+  error?: string;
+  fullResponse?: any;
+}
+export interface CatalystJobState {
+    formData: CatalystSignupFormData;
+    results: CatalystResult[];
+    isProcessing: boolean;
+    isPaused: boolean;
+    isComplete: boolean;
+    processingStartTime: Date | null;
+    processingTime: number;
+    totalToProcess: number;
+    countdown: number;
+    currentDelay: number;
+    filterText: string;
+}
+export interface CatalystJobs {
+    [profileName: string]: CatalystJobState;
+}
+
+
 export interface JobState {
   formData: TicketFormData;
   results: TicketResult[];
@@ -56,7 +91,7 @@ export interface JobState {
   isPaused: boolean;
   isComplete: boolean;
   processingStartTime: Date | null;
-  processingTime: number; // Time in seconds
+  processingTime: number; 
   totalTicketsToProcess: number;
   countdown: number;
   currentDelay: number;
@@ -70,7 +105,7 @@ export interface InvoiceJobState {
   isPaused: boolean;
   isComplete: boolean;
   processingStartTime: Date | null;
-  processingTime: number; // Time in seconds
+  processingTime: number; 
   totalToProcess: number;
   countdown: number;
   currentDelay: number;
@@ -98,6 +133,9 @@ export interface Profile {
   };
   inventory?: {
     orgId: string;
+  };
+  catalyst?: {
+    projectId: string;
   };
 }
 
@@ -146,20 +184,40 @@ const createInitialInvoiceJobState = (): InvoiceJobState => ({
     filterText: '',
 });
 
+const createInitialCatalystJobState = (): CatalystJobState => ({
+    formData: {
+        emails: '',
+        firstName: '',
+        lastName: '',
+        delay: 1,
+    },
+    results: [],
+    isProcessing: false,
+    isPaused: false,
+    isComplete: false,
+    processingStartTime: null,
+    processingTime: 0,
+    totalToProcess: 0,
+    countdown: 0,
+    currentDelay: 1,
+    filterText: '',
+});
+
 
 const MainApp = () => {
     const { toast } = useToast();
     const [jobs, setJobs] = useState<Jobs>({});
     const [invoiceJobs, setInvoiceJobs] = useState<InvoiceJobs>({});
+    const [catalystJobs, setCatalystJobs] = useState<CatalystJobs>({}); 
     const socketRef = useRef<Socket | null>(null);
     const queryClient = useQueryClient();
 
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
 
-    // Use the custom hook for each job type
     useJobTimer(jobs, setJobs, 'ticket');
     useJobTimer(invoiceJobs, setInvoiceJobs, 'invoice');
+    useJobTimer(catalystJobs, setCatalystJobs, 'catalyst'); 
 
     useEffect(() => {
         const socket = io(SERVER_URL);
@@ -227,7 +285,24 @@ const MainApp = () => {
             });
         });
 
-        const handleJobCompletion = (data: {profileName: string, jobType: 'ticket' | 'invoice'}, title: string, description: string, variant?: "destructive") => {
+        socket.on('catalystResult', (result: CatalystResult & { profileName: string }) => {
+          setCatalystJobs(prevJobs => {
+            const profileJob = prevJobs[result.profileName];
+            if (!profileJob) return prevJobs;
+            const isLast = profileJob.results.length + 1 >= profileJob.totalToProcess;
+            return {
+              ...prevJobs,
+              [result.profileName]: {
+                ...profileJob,
+                results: [...profileJob.results, result],
+                countdown: isLast ? 0 : profileJob.currentDelay,
+              }
+            };
+          });
+        });
+
+
+        const handleJobCompletion = (data: {profileName: string, jobType: 'ticket' | 'invoice' | 'catalyst'}, title: string, description: string, variant?: "destructive") => {
             const { profileName, jobType } = data;
             const updater = (prev: any) => {
                 if (!prev[profileName]) return prev;
@@ -236,8 +311,10 @@ const MainApp = () => {
 
             if (jobType === 'ticket') {
                 setJobs(updater);
-            } else {
+            } else if (jobType === 'invoice') {
                 setInvoiceJobs(updater);
+            } else if (jobType === 'catalyst') { 
+                setCatalystJobs(updater);
             }
             toast({ title, description, variant });
         };
@@ -250,7 +327,7 @@ const MainApp = () => {
           socket.disconnect();
         };
     }, [toast]);
-
+    
     const handleOpenAddProfile = () => {
         setEditingProfile(null);
         setIsProfileModalOpen(true);
@@ -301,6 +378,7 @@ const MainApp = () => {
             toast({ title: 'Error', description: 'Failed to delete profile.', variant: 'destructive' });
         }
     };
+
 
     return (
         <>
@@ -358,6 +436,40 @@ const MainApp = () => {
                         path="/email-statics"
                         element={
                             <EmailStatics
+                                onAddProfile={handleOpenAddProfile}
+                                onEditProfile={handleOpenEditProfile}
+                                onDeleteProfile={handleDeleteProfile}
+                            />
+                        }
+                    />
+                    <Route
+                        path="/bulk-signup"
+                        element={
+                            <BulkSignup
+                                jobs={catalystJobs}
+                                setJobs={setCatalystJobs}
+                                socket={socketRef.current}
+                                createInitialJobState={createInitialCatalystJobState}
+                                onAddProfile={handleOpenAddProfile}
+                                onEditProfile={handleOpenEditProfile}
+                                onDeleteProfile={handleDeleteProfile}
+                            />
+                        }
+                    />
+                    <Route
+                        path="/single-signup"
+                        element={
+                            <SingleSignup
+                                onAddProfile={handleOpenAddProfile}
+                                onEditProfile={handleOpenEditProfile}
+                                onDeleteProfile={handleDeleteProfile}
+                            />
+                        }
+                    />
+                    <Route
+                        path="/manage-users"
+                        element={
+                            <ManageUsers
                                 onAddProfile={handleOpenAddProfile}
                                 onEditProfile={handleOpenEditProfile}
                                 onDeleteProfile={handleDeleteProfile}

@@ -5,6 +5,8 @@
 /* Zoho Desk Dashboard Design System */
 @layer base {
   :root {
+	  
+	font-size: 90%; /* Add this line */  
     /* Core Background & Text - Pure White Background */
     --background: 0 0% 100%;
     --foreground: 0 0% 9%;

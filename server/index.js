@@ -3,10 +3,10 @@ const http = require('http');
 const { Server } = require("socket.io");
 const cors = require('cors');
 const crypto = require('crypto');
-// MODIFIED: Added missing imports
 const { readProfiles, writeProfiles, parseError, getValidAccessToken, makeApiCall, createJobId } = require('./utils');
 const deskHandler = require('./desk-handler');
 const inventoryHandler = require('./inventory-handler');
+const catalystHandler = require('./catalyst-handler');
 require('dotenv').config();
 
 const app = express();
@@ -19,6 +19,7 @@ const REDIRECT_URI = `http://localhost:${port}/api/zoho/callback`;
 const activeJobs = {};
 deskHandler.setActiveJobs(activeJobs);
 inventoryHandler.setActiveJobs(activeJobs);
+catalystHandler.setActiveJobs(activeJobs);
 
 const authStates = {};
 
@@ -37,7 +38,8 @@ app.post('/api/zoho/auth', (req, res) => {
 
     setTimeout(() => delete authStates[state], 300000);
 
-    const combinedScopes = 'Desk.tickets.ALL,Desk.settings.ALL,Desk.basic.READ,ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL,ZohoInventory.settings.UPDATE,ZohoInventory.settings.READ';
+    // CORRECTED: Added ZohoCatalyst.projects.users.READ to this line
+    const combinedScopes = 'Desk.tickets.ALL,Desk.settings.ALL,Desk.basic.READ,ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL,ZohoInventory.settings.UPDATE,ZohoInventory.settings.READ,ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ';
     const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=${combinedScopes}&client_id=${clientId}&response_type=code&access_type=offline&redirect_uri=${REDIRECT_URI}&prompt=consent&state=${state}`;
     
     res.json({ authUrl });
@@ -78,7 +80,7 @@ app.get('/api/zoho/callback', async (req, res) => {
     }
 });
 
-// --- SINGLE TICKET AND INVOICE REST ENDPOINTS ---
+// --- REST ENDPOINTS ---
 app.post('/api/tickets/single', async (req, res) => {
     try {
         const result = await deskHandler.handleSendSingleTicket(req.body);
@@ -88,7 +90,6 @@ app.post('/api/tickets/single', async (req, res) => {
     }
 });
 
-// NEW: Verification endpoint
 app.post('/api/tickets/verify', async (req, res) => {
     try {
         const result = await deskHandler.handleVerifyTicketEmail(req.body);
@@ -101,6 +102,15 @@ app.post('/api/tickets/verify', async (req, res) => {
 app.post('/api/invoices/single', async (req, res) => {
     try {
         const result = await inventoryHandler.handleSendSingleInvoice(req.body);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'An unexpected server error occurred.' });
+    }
+});
+
+app.post('/api/catalyst/single', async (req, res) => {
+    try {
+        const result = await catalystHandler.handleSingleSignup(req.body);
         res.json(result);
     } catch (error) {
         res.status(500).json({ success: false, error: 'An unexpected server error occurred.' });
@@ -200,7 +210,17 @@ io.on('connection', (socket) => {
                     orgName: currentOrg.name, 
                     agentInfo: { firstName: currentOrg.contact_name, lastName: '' } 
                 };
-
+            } else if (service === 'catalyst') {
+                if (!activeProfile.catalyst || !activeProfile.catalyst.projectId) {
+                    throw new Error('Catalyst Project ID is not configured for this profile.');
+                }
+                const projectId = activeProfile.catalyst.projectId;
+                const catalystCheckUrl = `/baas/v1/project/${projectId}/project-user?start=1&end=1`;
+                await makeApiCall('get', catalystCheckUrl, null, activeProfile, 'catalyst');
+                validationData = { 
+                    orgName: `Project ID: ${projectId.substring(0, 10)}...`,
+                    agentInfo: { firstName: 'Catalyst Project', lastName: 'Verified' } 
+                };
             } else { // Default to 'desk'
                 if (!activeProfile.desk || !activeProfile.desk.orgId) {
                     throw new Error('Desk Organization ID is not configured for this profile.');
@@ -282,6 +302,25 @@ io.on('connection', (socket) => {
             handler(socket, { ...data, activeProfile });
         });
     }
+    
+    // --- ZOHO CATALYST LISTENERS ---
+    const catalystListeners = {
+        'startBulkSignup': catalystHandler.handleStartBulkSignup,
+        // NEW: Add new event handlers
+        'catalyst:getAllUsers': catalystHandler.handleGetAllUsers,
+        'catalyst:deleteUsers': catalystHandler.handleDeleteUsers,
+    };
+
+    for (const [event, handler] of Object.entries(catalystListeners)) {
+        socket.on(event, (data) => {
+            const profiles = readProfiles();
+            const activeProfile = data ? profiles.find(p => p.profileName === data.selectedProfileName) : null;
+            handler(socket, { ...data, activeProfile });
+        });
+    }
+	
+	
+	
 });
 
 

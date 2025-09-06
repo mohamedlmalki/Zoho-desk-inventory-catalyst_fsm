@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query';
 import { io, Socket } from 'socket.io-client';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ProfileSelector } from '@/components/dashboard/ProfileSelector';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -196,21 +195,20 @@ const EmailStatics: React.FC<EmailStaticsProps> = ({ onAddProfile, onEditProfile
 
   return (
       <>
-        <DashboardLayout onAddProfile={onAddProfile}>
+        <DashboardLayout
+            onAddProfile={onAddProfile}
+            profiles={inventoryProfiles}
+            selectedProfile={selectedProfile}
+            jobs={{}}
+            onProfileChange={handleProfileChange}
+            apiStatus={apiStatus}
+            onShowStatus={() => setIsStatusModalOpen(true)}
+            onManualVerify={handleManualVerify}
+            socket={socketRef.current}
+            onEditProfile={onEditProfile}
+            onDeleteProfile={onDeleteProfile}
+        >
           <div className="space-y-8">
-            <ProfileSelector
-              profiles={inventoryProfiles}
-              selectedProfile={selectedProfile}
-              jobs={{}}
-              onProfileChange={handleProfileChange}
-              apiStatus={apiStatus}
-              onShowStatus={() => setIsStatusModalOpen(true)}
-              onManualVerify={handleManualVerify}
-              socket={socketRef.current}
-              onEditProfile={onEditProfile}
-              onDeleteProfile={onDeleteProfile}
-            />
-
             <Card>
               <CardHeader>
                 <CardTitle>Email Statics</CardTitle>

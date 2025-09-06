@@ -6,6 +6,7 @@ const PROFILES_PATH = path.join(__dirname, 'profiles.json');
 const TICKET_LOG_PATH = path.join(__dirname, 'ticket-log.json');
 const tokenCache = {};
 
+// ... (readProfiles, writeProfiles, and other functions remain the same) ...
 const readProfiles = () => {
     try {
         if (fs.existsSync(PROFILES_PATH)) {
@@ -51,6 +52,19 @@ const writeToTicketLog = (newEntry) => {
 const createJobId = (socketId, profileName, jobType) => `${socketId}_${profileName}_${jobType}`;
 
 const parseError = (error) => {
+    console.error("\n--- ZOHO API ERROR ---");
+    if (error.response) {
+        console.error("Status:", error.response.status);
+        console.error("Status Text:", error.response.statusText);
+        console.error("Response Data:", JSON.stringify(error.response.data, null, 2));
+    } else if (error.request) {
+        console.error("Request Error:", "No response received from Zoho API.");
+        console.error(error.message);
+    } else {
+        console.error("Generic Error:", error.message);
+    }
+    console.error("--------------------\n");
+
     if (error.response) {
         if (error.response.data && error.response.data.message) {
             return {
@@ -92,10 +106,12 @@ const getValidAccessToken = async (profile, service) => {
 
     const scopes = {
         desk: 'Desk.tickets.ALL,Desk.settings.ALL',
-        inventory: 'ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL,ZohoInventory.settings.UPDATE'
+        inventory: 'ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL,ZohoInventory.settings.UPDATE',
+        // CORRECTED: Added the READ scope for Catalyst
+        catalyst: 'ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ',
     };
 
-    const serviceScopes = scopes[service] || scopes.desk + ',' + scopes.inventory;
+    const allScopes = Object.values(scopes).join(',');
 
     try {
         const params = new URLSearchParams({
@@ -103,7 +119,7 @@ const getValidAccessToken = async (profile, service) => {
             client_id: profile.clientId,
             client_secret: profile.clientSecret,
             grant_type: 'refresh_token',
-            scope: serviceScopes
+            scope: allScopes
         });
 
         const response = await axios.post('https://accounts.zoho.com/oauth/v2/token', params);
@@ -113,12 +129,14 @@ const getValidAccessToken = async (profile, service) => {
         }
         
         const { expires_in } = response.data;
-        tokenCache[cacheKey] = { data: response.data, expiresAt: now + ((expires_in - 60) * 1000) };
+        Object.keys(scopes).forEach(s => {
+            tokenCache[`${profile.profileName}_${s}`] = { data: response.data, expiresAt: now + ((expires_in - 60) * 1000) };
+        });
         return response.data;
 
     } catch (error) {
         const { message } = parseError(error);
-        console.error(`TOKEN_REFRESH_FAILED for ${profile.profileName} (${service}):`, message);
+        console.error(`TOKEN_REFRESH_FAILED for ${profile.profileName}:`, message);
         throw error;
     }
 };
@@ -131,25 +149,39 @@ const makeApiCall = async (method, relativeUrl, data, profile, service) => {
     }
 
     const serviceConfig = profile[service];
-    if (!serviceConfig || !serviceConfig.orgId) {
-        throw new Error(`Configuration for service "${service}" or its orgId is missing in profile "${profile.profileName}".`);
+    if (!serviceConfig) {
+         throw new Error(`Configuration for service "${service}" is missing in profile "${profile.profileName}".`);
     }
 
     const baseUrls = {
         desk: 'https://desk.zoho.com',
-        inventory: 'https://www.zohoapis.com/inventory'
+        inventory: 'https://www.zohoapis.com/inventory',
+        catalyst: 'https://api.catalyst.zoho.com',
     };
     
     const baseUrl = baseUrls[service];
     const fullUrl = `${baseUrl}${relativeUrl}`;
-    const orgId = serviceConfig.orgId;
-
+    
     const headers = { 
         'Authorization': `Zoho-oauthtoken ${accessToken}`,
-        ...(service === 'desk' && { 'orgId': orgId })
     };
+    
+    if (service === 'desk' && serviceConfig.orgId) {
+        headers['orgId'] = serviceConfig.orgId;
+    }
 
-    const params = service === 'inventory' ? { organization_id: orgId } : {};
+    const params = service === 'inventory' && serviceConfig.orgId ? { organization_id: serviceConfig.orgId } : {};
+    
+    console.log("\n--- ZOHO API CALL ---");
+    console.log(`[${new Date().toISOString()}]`);
+    console.log(`Profile: ${profile.profileName}, Service: ${service}`);
+    console.log(`Request: ${method.toUpperCase()} ${fullUrl}`);
+    console.log("Headers:", JSON.stringify(headers, (key, value) => key === 'Authorization' ? '[REDACTED]' : value, 2));
+    console.log("Params:", JSON.stringify(params, null, 2));
+    if (data) {
+        console.log("Body:", JSON.stringify(data, null, 2));
+    }
+    console.log("---------------------\n");
     
     return axios({ method, url: fullUrl, data, headers, params });
 };

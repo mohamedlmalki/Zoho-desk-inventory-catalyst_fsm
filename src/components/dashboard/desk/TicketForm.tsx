@@ -251,9 +251,7 @@ export const TicketForm: React.FC<TicketFormProps> = ({
               <Send className="h-5 w-5 text-primary" />
               <span>Create Bulk Tickets</span>
             </CardTitle>
-            <CardDescription className="mt-1">
-              Create multiple tickets simultaneously for different recipients
-            </CardDescription>
+            
           </div>
           <div className="flex items-center space-x-2">
             <Button variant="outline" size="sm" onClick={onClearTicketLogs}>
@@ -311,9 +309,7 @@ export const TicketForm: React.FC<TicketFormProps> = ({
                   required
                   disabled={isProcessing}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Enter one email address per line, or import from a .csv/.txt file.
-                </p>
+                
 
                 {jobState && (jobState.isProcessing || jobState.results.length > 0) && (
                     <div className="pt-4 border-t border-dashed">

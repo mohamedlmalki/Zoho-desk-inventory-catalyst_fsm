@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Socket } from 'socket.io-client';
 import { DashboardLayout } from './DashboardLayout';
-import { ProfileSelector } from './ProfileSelector';
 import { TicketForm } from './desk/TicketForm';
 import { ResultsDisplay, TicketResult } from './desk/ResultsDisplay';
 import { useToast } from '@/hooks/use-toast';
@@ -25,9 +24,9 @@ interface TicketFormData {
 }
 
 type ApiStatus = {
-  status: 'loading' | 'success' | 'error';
-  message: string;
-  fullResponse?: any;
+    status: 'loading' | 'success' | 'error';
+    message: string;
+    fullResponse?: any;
 };
 
 interface EmailFailure {
@@ -202,8 +201,6 @@ export const ZohoDashboard: React.FC<ZohoDashboardProps> = ({ jobs, setJobs, cre
         ...prev,
         [activeProfileName]: {
             ...prev[activeProfileName],
-            // *** THIS IS THE FIX ***
-            // Reset results to an empty array before starting a new job.
             results: [], 
             isProcessing: true,
             isPaused: false,
@@ -318,20 +315,23 @@ export const ZohoDashboard: React.FC<ZohoDashboardProps> = ({ jobs, setJobs, cre
 
   return (
     <>
-      <DashboardLayout stats={stats} onAddProfile={onAddProfile}>
+      <DashboardLayout 
+        stats={stats} 
+        onAddProfile={onAddProfile}
+        // Pass all the necessary props for ProfileSelector
+        profiles={profiles}
+        selectedProfile={selectedProfile}
+        jobs={jobs}
+        onProfileChange={handleProfileChange}
+        apiStatus={apiStatus}
+        onShowStatus={() => setIsStatusModalOpen(true)}
+        onManualVerify={handleManualVerify}
+        socket={socket}
+        onEditProfile={onEditProfile}
+        onDeleteProfile={onDeleteProfile}
+      >
         <div className="space-y-8">
-          <ProfileSelector
-            profiles={profiles}
-            selectedProfile={selectedProfile}
-            jobs={jobs}
-            onProfileChange={handleProfileChange}
-            apiStatus={apiStatus}
-            onShowStatus={() => setIsStatusModalOpen(true)}
-            onManualVerify={handleManualVerify}
-            socket={socket}
-            onEditProfile={onEditProfile}
-            onDeleteProfile={onDeleteProfile}
-          />
+          {/* ProfileSelector is now in DashboardLayout */}
           {currentJob && (
             <>
               <TicketForm

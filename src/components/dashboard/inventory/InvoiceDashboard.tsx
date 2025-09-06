@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Socket } from 'socket.io-client';
 import { DashboardLayout } from '../DashboardLayout';
-import { ProfileSelector } from '../ProfileSelector';
 import { useToast } from '@/hooks/use-toast';
 import { Profile, InvoiceJobs, InvoiceJobState, InvoiceFormData } from '@/App';
 import { InvoiceForm } from './InvoiceForm';
@@ -54,12 +53,14 @@ export const InvoiceDashboard: React.FC<InvoiceDashboardProps> = ({
     refetchOnWindowFocus: false,
   });
 
+  const inventoryProfiles = profiles.filter(p => p.inventory?.orgId);
+  
   useEffect(() => {
-    if (profiles.length > 0) {
+    if (inventoryProfiles.length > 0) {
         setJobs(prevJobs => {
             const newJobs = { ...prevJobs };
             let updated = false;
-            profiles.forEach(p => {
+            inventoryProfiles.forEach(p => {
                 if (!newJobs[p.profileName]) {
                     newJobs[p.profileName] = createInitialJobState();
                     updated = true;
@@ -68,11 +69,10 @@ export const InvoiceDashboard: React.FC<InvoiceDashboardProps> = ({
             return updated ? newJobs : prevJobs;
         });
     }
-    if (profiles.length > 0 && !activeProfileName) {
-      const inventoryProfile = profiles.find(p => p.inventory?.orgId);
-      setActiveProfileName(inventoryProfile ? inventoryProfile.profileName : profiles[0]?.profileName || null);
+    if (inventoryProfiles.length > 0 && !activeProfileName) {
+      setActiveProfileName(inventoryProfiles[0]?.profileName || null);
     }
-  }, [profiles, activeProfileName, setJobs, createInitialJobState]);
+  }, [inventoryProfiles, activeProfileName, setJobs, createInitialJobState]);
   
   useEffect(() => {
     if (!socket) return;
@@ -135,7 +135,7 @@ export const InvoiceDashboard: React.FC<InvoiceDashboardProps> = ({
   }, [activeProfileName, socket]);
 
   const handleProfileChange = (profileName: string) => {
-    const profile = profiles.find(p => p.profileName === profileName);
+    const profile = inventoryProfiles.find(p => p.profileName === profileName);
     if (profile) {
       setActiveProfileName(profileName);
       toast({ title: "Profile Changed", description: `Switched to ${profileName}` });
@@ -228,30 +228,31 @@ export const InvoiceDashboard: React.FC<InvoiceDashboardProps> = ({
       socket.emit('endJob', { profileName: activeProfileName, jobType: 'invoice' });
   };
 
-  const selectedProfile = profiles.find(p => p.profileName === activeProfileName) || null;
+  const selectedProfile = inventoryProfiles.find(p => p.profileName === activeProfileName) || null;
   const currentJob = activeProfileName ? jobs[activeProfileName] : null;
 
   return (
     <>
-    <DashboardLayout onAddProfile={onAddProfile} stats={{
-        totalTickets: currentJob?.results.length || 0,
-        totalToProcess: currentJob?.totalToProcess || 0,
-        isProcessing: currentJob?.isProcessing || false,
-    }}>
+    <DashboardLayout 
+        onAddProfile={onAddProfile} 
+        stats={{
+            totalTickets: currentJob?.results.length || 0,
+            totalToProcess: currentJob?.totalToProcess || 0,
+            isProcessing: currentJob?.isProcessing || false,
+        }}
+        // Pass all the necessary props for ProfileSelector
+        profiles={inventoryProfiles}
+        selectedProfile={selectedProfile}
+        jobs={jobs}
+        onProfileChange={handleProfileChange}
+        apiStatus={apiStatus}
+        onShowStatus={() => setIsStatusModalOpen(true)}
+        onManualVerify={handleManualVerify}
+        socket={socket}
+        onEditProfile={onEditProfile}
+        onDeleteProfile={onDeleteProfile}
+    >
       <div className="space-y-8">
-        <ProfileSelector
-          profiles={profiles.filter(p => p.inventory?.orgId)}
-          selectedProfile={selectedProfile}
-          jobs={jobs}
-          onProfileChange={handleProfileChange}
-          apiStatus={apiStatus}
-          onShowStatus={() => setIsStatusModalOpen(true)}
-          onManualVerify={handleManualVerify}
-          socket={socket}
-          onEditProfile={onEditProfile}
-          onDeleteProfile={onDeleteProfile}
-        />
-        
         {currentJob && (
             <>
                 <InvoiceForm 

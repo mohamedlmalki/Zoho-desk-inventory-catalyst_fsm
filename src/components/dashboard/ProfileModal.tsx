@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Profile } from '@/App';
 import { useToast } from '@/hooks/use-toast';
-import { KeyRound, Loader2, Building, Briefcase } from 'lucide-react';
+import { KeyRound, Loader2, Building, Briefcase, Cloud } from 'lucide-react'; // Added Cloud icon
 import { Socket } from 'socket.io-client';
 import { Separator } from '../ui/separator';
 
@@ -19,7 +19,6 @@ interface ProfileModalProps {
 
 const SERVER_URL = "http://localhost:3000";
 
-// NEW: Define an initial empty state for the form
 const getInitialFormData = (): Profile => ({
   profileName: '',
   clientId: '',
@@ -34,6 +33,10 @@ const getInitialFormData = (): Profile => ({
   inventory: {
     orgId: '',
   },
+  // NEW: Added catalyst to initial state
+  catalyst: {
+    projectId: '',
+  },
 });
 
 
@@ -45,21 +48,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onS
   useEffect(() => {
     if (isOpen) {
         if (profile) {
-            // If editing, merge the existing profile data with the full structure to ensure no fields are missing
             setFormData({
                 ...getInitialFormData(),
                 ...profile,
                 desk: { ...getInitialFormData().desk, ...profile.desk },
                 inventory: { ...getInitialFormData().inventory, ...profile.inventory },
+                // NEW: Ensure catalyst data is merged correctly
+                catalyst: { ...getInitialFormData().catalyst, ...profile.catalyst },
             });
         } else {
-            // If adding a new profile, start with a completely empty form
             setFormData(getInitialFormData());
         }
     }
   }, [profile, isOpen]);
 
-  // Listen for token from server via Socket.IO
   useEffect(() => {
     if (!socket || !isOpen) return;
 
@@ -88,8 +90,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onS
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // NEW: Handler for nested fields (Desk and Inventory)
-  const handleNestedChange = (service: 'desk' | 'inventory', e: React.ChangeEvent<HTMLInputElement>) => {
+  // UPDATED: handleNestedChange now supports 'catalyst'
+  const handleNestedChange = (service: 'desk' | 'inventory' | 'catalyst', e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
         ...prev,
@@ -219,6 +221,22 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onS
                 <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="inventory_orgId" className="text-right">Org ID</Label>
                 <Input id="inventory_orgId" name="orgId" value={formData.inventory?.orgId || ''} onChange={(e) => handleNestedChange('inventory', e)} className="col-span-3" />
+                </div>
+            </div>
+          </div>
+
+          <Separator className="my-4" />
+
+          {/* --- NEW: ZOHO CATALYST SETTINGS --- */}
+          <div>
+            <h4 className="text-sm font-semibold mb-4 flex items-center">
+              <Cloud className="h-4 w-4 mr-2" />
+              Zoho Catalyst Settings
+            </h4>
+            <div className="grid gap-4 pl-4 border-l-2 ml-2">
+                <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="catalyst_projectId" className="text-right">Project ID</Label>
+                <Input id="catalyst_projectId" name="projectId" value={formData.catalyst?.projectId || ''} onChange={(e) => handleNestedChange('catalyst', e)} className="col-span-3" />
                 </div>
             </div>
           </div>

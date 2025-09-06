@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { io, Socket } from 'socket.io-client';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ProfileSelector } from '@/components/dashboard/ProfileSelector';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -414,21 +413,22 @@ const SingleTicket: React.FC<SingleTicketProps> = ({ onAddProfile, onEditProfile
 
   return (
     <>
-      <DashboardLayout onAddProfile={onAddProfile}>
+      <DashboardLayout 
+        onAddProfile={onAddProfile}
+        // Pass all the props needed by ProfileSelector to the layout
+        profiles={profiles}
+        selectedProfile={selectedProfile}
+        jobs={{}} // Single ticket page doesn't have bulk job states
+        onProfileChange={handleProfileChange}
+        apiStatus={apiStatus}
+        onShowStatus={() => setIsStatusModalOpen(true)}
+        onManualVerify={handleManualVerify}
+        socket={socket}
+        onEditProfile={onEditProfile}
+        onDeleteProfile={onDeleteProfile}
+      >
         <div className="space-y-8">
-          <ProfileSelector
-            profiles={profiles}
-            selectedProfile={selectedProfile}
-            jobs={{}}
-            onProfileChange={handleProfileChange}
-            apiStatus={apiStatus}
-            onShowStatus={() => setIsStatusModalOpen(true)}
-            onManualVerify={handleManualVerify}
-            socket={socket}
-            onEditProfile={onEditProfile}
-            onDeleteProfile={onDeleteProfile}
-          />
-
+          {/* The ProfileSelector is now rendered in the sidebar by DashboardLayout */}
           <Card className="shadow-medium hover:shadow-large transition-all duration-300">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
