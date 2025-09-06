@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -30,17 +30,18 @@ interface CatalystUser {
   };
 }
 
+
 interface ManageUsersProps {
   onAddProfile: () => void;
   onEditProfile: (profile: Profile) => void;
   onDeleteProfile: (profileName: string) => void;
+  socket: Socket | null;
 }
 
 const SERVER_URL = "http://localhost:3000";
 
-const ManageUsers: React.FC<ManageUsersProps> = ({ onAddProfile, onEditProfile, onDeleteProfile }) => {
+const ManageUsers: React.FC<ManageUsersProps> = ({ onAddProfile, onEditProfile, onDeleteProfile, socket }) => {
   const { toast } = useToast();
-  const socketRef = useRef<Socket | null>(null);
   const [activeProfileName, setActiveProfileName] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<ApiStatus>({ status: 'loading', message: 'Connecting...' });
   const [users, setUsers] = useState<CatalystUser[]>([]);
@@ -64,27 +65,22 @@ const ManageUsers: React.FC<ManageUsersProps> = ({ onAddProfile, onEditProfile, 
   const selectedProfile = catalystProfiles.find(p => p.profileName === activeProfileName) || null;
 
   const fetchUsers = useCallback(() => {
-    if (activeProfileName && socketRef.current?.connected) {
+    if (activeProfileName && socket?.connected) {
       setIsLoading(true);
       setUsers([]);
-      socketRef.current.emit('catalyst:getAllUsers', { selectedProfileName: activeProfileName });
+      socket.emit('catalyst:getAllUsers', { selectedProfileName: activeProfileName });
     }
-  }, [activeProfileName]);
+  }, [activeProfileName, socket]);
   
   const checkApiStatus = useCallback(() => {
-    if (activeProfileName && socketRef.current?.connected) {
+    if (activeProfileName && socket?.connected) {
       setApiStatus({ status: 'loading', message: 'Checking API connection...' });
-      socketRef.current.emit('checkApiStatus', { selectedProfileName: activeProfileName, service: 'catalyst' });
+      socket.emit('checkApiStatus', { selectedProfileName: activeProfileName, service: 'catalyst' });
     }
-  }, [activeProfileName]);
+  }, [activeProfileName, socket]);
 
   useEffect(() => {
-    const socket = io(SERVER_URL);
-    socketRef.current = socket;
-
-    socket.on('connect', () => {
-        toast({ title: "Connected to server!" });
-    });
+    if (!socket) return;
 
     socket.on('apiStatusResult', (result) => setApiStatus({
       status: result.success ? 'success' : 'error',
@@ -113,9 +109,11 @@ const ManageUsers: React.FC<ManageUsersProps> = ({ onAddProfile, onEditProfile, 
     });
 
     return () => {
-      socket.disconnect();
+      socket.off('apiStatusResult');
+      socket.off('catalyst:usersResult');
+      socket.off('catalyst:usersDeletedResult');
     };
-  }, [toast, fetchUsers]);
+  }, [socket, toast, fetchUsers]);
   
   useEffect(() => {
     if (catalystProfiles.length > 0 && !activeProfileName) {
@@ -123,10 +121,11 @@ const ManageUsers: React.FC<ManageUsersProps> = ({ onAddProfile, onEditProfile, 
     }
   }, [catalystProfiles, activeProfileName]);
 
-  // CORRECTED: Added dependency array
   useEffect(() => {
-    checkApiStatus();
-    fetchUsers();
+    if (activeProfileName) {
+      checkApiStatus();
+      fetchUsers();
+    }
   }, [activeProfileName, checkApiStatus, fetchUsers]);
 
 
@@ -147,18 +146,19 @@ const ManageUsers: React.FC<ManageUsersProps> = ({ onAddProfile, onEditProfile, 
   };
 
   const handleSelectAll = () => {
-    if (selectedUsers.length === users.length) {
+    const validUsers = users.filter(user => user && user.user_id);
+    if (selectedUsers.length === validUsers.length) {
       setSelectedUsers([]);
     } else {
-      setSelectedUsers(users.map(u => u.user_id));
+      setSelectedUsers(validUsers.map(u => u.user_id));
     }
   };
 
   const handleDelete = () => {
-    if (selectedUsers.length > 0 && socketRef.current?.connected) {
+    if (selectedUsers.length > 0 && socket?.connected) {
         setShowDeleteConfirm(false);
         setIsDeleting(true);
-        socketRef.current.emit('catalyst:deleteUsers', { selectedProfileName: activeProfileName, userIds: selectedUsers });
+        socket.emit('catalyst:deleteUsers', { selectedProfileName: activeProfileName, userIds: selectedUsers });
     }
   };
   
@@ -173,7 +173,7 @@ const ManageUsers: React.FC<ManageUsersProps> = ({ onAddProfile, onEditProfile, 
             apiStatus={apiStatus}
             onShowStatus={() => setIsStatusModalOpen(true)}
             onManualVerify={handleManualVerify}
-            socket={socketRef.current}
+            socket={socket}
             onEditProfile={onEditProfile}
             onDeleteProfile={onDeleteProfile}
         >
@@ -205,7 +205,7 @@ const ManageUsers: React.FC<ManageUsersProps> = ({ onAddProfile, onEditProfile, 
                     <TableRow>
                       <TableHead className="w-[50px]">
                         <Checkbox
-                          checked={selectedUsers.length === users.length && users.length > 0}
+                          checked={selectedUsers.length > 0 && selectedUsers.length === users.filter(u => u && u.user_id).length}
                           onCheckedChange={handleSelectAll}
                         />
                       </TableHead>
@@ -235,8 +235,12 @@ const ManageUsers: React.FC<ManageUsersProps> = ({ onAddProfile, onEditProfile, 
                           No users found in this project.
                         </TableCell>
                       </TableRow>
-                    ) : users.map(user => (
-                      <TableRow key={user.user_id} data-state={selectedUsers.includes(user.user_id) && "selected"}>
+                    ) : users.map((user, index) => {
+                      if (!user || !user.user_id) {
+                        return null; // Skip rendering invalid user objects
+                      }
+                      return (
+                      <TableRow key={`${user.user_id}-${index}`} data-state={selectedUsers.includes(user.user_id) && "selected"}>
                         <TableCell>
                           <Checkbox
                             checked={selectedUsers.includes(user.user_id)}
@@ -251,7 +255,8 @@ const ManageUsers: React.FC<ManageUsersProps> = ({ onAddProfile, onEditProfile, 
                           <Badge variant={user.status === 'ACTIVE' ? 'success' : 'secondary'}>{user.status}</Badge>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    );
+                  })}
                   </TableBody>
                 </Table>
               </CardContent>

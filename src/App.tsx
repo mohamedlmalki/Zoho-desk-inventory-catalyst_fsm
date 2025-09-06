@@ -473,6 +473,7 @@ const MainApp = () => {
                                 onAddProfile={handleOpenAddProfile}
                                 onEditProfile={handleOpenEditProfile}
                                 onDeleteProfile={handleDeleteProfile}
+                                socket={socketRef.current}
                             />
                         }
                     />

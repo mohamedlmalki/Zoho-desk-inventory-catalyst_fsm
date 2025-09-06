@@ -108,7 +108,9 @@ const getValidAccessToken = async (profile, service) => {
         desk: 'Desk.tickets.ALL,Desk.settings.ALL',
         inventory: 'ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL,ZohoInventory.settings.UPDATE',
         // CORRECTED: Added the READ scope for Catalyst
-        catalyst: 'ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ',
+        // server/utils.js
+
+catalyst: 'ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,ZohoCatalyst.projects.users.DELETE',
     };
 
     const allScopes = Object.values(scopes).join(',');

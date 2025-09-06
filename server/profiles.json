@@ -30,10 +30,10 @@
     }
   },
   {
-    "profileName": "zoho catalyst",
+    "profileName": "catalyst",
     "clientId": "1000.W4U063KW8L57D407UWOTM7MJD2OV4N",
     "clientSecret": "708968f201234e39fdb09f3f58fe1ce68abd78e946",
-    "refreshToken": "1000.49d0f64a40f6335da516fbf90733bc39.1adef157e96f330e5fefb08a60ae0e08",
+    "refreshToken": "1000.a3d79e93bc8d6dad7d1cc2061ec6bbc8.d52e395160df27e4e70b3ad6a097d565",
     "desk": {
       "orgId": "",
       "defaultDepartmentId": "",
