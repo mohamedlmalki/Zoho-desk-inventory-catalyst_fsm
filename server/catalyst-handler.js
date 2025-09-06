@@ -126,53 +126,9 @@ const handleSingleSignup = async (data) => {
     }
 };
 
-// NEW: Function to get all users
-const handleGetAllUsers = async (socket, data) => {
-    try {
-        const { activeProfile } = data;
-        if (!activeProfile || !activeProfile.catalyst || !activeProfile.catalyst.projectId) {
-            throw new Error('Catalyst profile not found for fetching users.');
-        }
-        
-        const projectId = activeProfile.catalyst.projectId;
-        const response = await makeApiCall('get', `/baas/v1/project/${projectId}/project-user`, null, activeProfile, 'catalyst');
-        
-        socket.emit('catalyst:usersResult', { success: true, users: response.data.data || [] });
-    } catch (error) {
-        const { message } = parseError(error);
-        socket.emit('catalyst:usersResult', { success: false, error: message });
-    }
-};
-
-// NEW: Function to delete users
-const handleDeleteUsers = async (socket, data) => {
-    try {
-        const { activeProfile, userIds } = data;
-        if (!activeProfile || !activeProfile.catalyst || !activeProfile.catalyst.projectId) {
-            throw new Error('Catalyst profile not found for deleting users.');
-        }
-        if (!userIds || userIds.length === 0) {
-            throw new Error('No user IDs selected for deletion.');
-        }
-        
-        const projectId = activeProfile.catalyst.projectId;
-        let deletedCount = 0;
-        for (const userId of userIds) {
-            await makeApiCall('delete', `/baas/v1/project/${projectId}/project-user/${userId}`, null, activeProfile, 'catalyst');
-            deletedCount++;
-        }
-        
-        socket.emit('catalyst:usersDeletedResult', { success: true, deletedCount });
-    } catch (error) {
-        const { message } = parseError(error);
-        socket.emit('catalyst:usersDeletedResult', { success: false, error: message });
-    }
-};
 
 module.exports = {
     setActiveJobs,
     handleStartBulkSignup,
     handleSingleSignup,
-    handleGetAllUsers,
-    handleDeleteUsers,
 };

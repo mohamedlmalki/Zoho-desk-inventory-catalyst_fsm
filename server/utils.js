@@ -6,7 +6,6 @@ const PROFILES_PATH = path.join(__dirname, 'profiles.json');
 const TICKET_LOG_PATH = path.join(__dirname, 'ticket-log.json');
 const tokenCache = {};
 
-// ... (readProfiles, writeProfiles, and other functions remain the same) ...
 const readProfiles = () => {
     try {
         if (fs.existsSync(PROFILES_PATH)) {
@@ -104,16 +103,18 @@ const getValidAccessToken = async (profile, service) => {
         return tokenCache[cacheKey].data;
     }
 
+    // *** FIX: Define scopes for each service ***
     const scopes = {
-        desk: 'Desk.tickets.ALL,Desk.settings.ALL',
-        inventory: 'ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL,ZohoInventory.settings.UPDATE',
-        // CORRECTED: Added the READ scope for Catalyst
-        // server/utils.js
-
-catalyst: 'ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,ZohoCatalyst.projects.users.DELETE',
+        desk: 'Desk.tickets.ALL,Desk.settings.ALL,Desk.basic.READ',
+        inventory: 'ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL',
+        catalyst: 'ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,ZohoCatalyst.projects.users.DELETE',
     };
-
-    const allScopes = Object.values(scopes).join(',');
+    
+    // *** FIX: Request token using only the scopes needed for the current service ***
+    const requiredScope = scopes[service];
+    if (!requiredScope) {
+        throw new Error(`Invalid service specified: ${service}`);
+    }
 
     try {
         const params = new URLSearchParams({
@@ -121,7 +122,7 @@ catalyst: 'ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,Z
             client_id: profile.clientId,
             client_secret: profile.clientSecret,
             grant_type: 'refresh_token',
-            scope: allScopes
+            scope: requiredScope // Use the specific scope here
         });
 
         const response = await axios.post('https://accounts.zoho.com/oauth/v2/token', params);
@@ -130,15 +131,18 @@ catalyst: 'ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,Z
             throw new Error(response.data.error);
         }
         
+        // *** FIX: Cache the token only for the specific service it was requested for ***
         const { expires_in } = response.data;
-        Object.keys(scopes).forEach(s => {
-            tokenCache[`${profile.profileName}_${s}`] = { data: response.data, expiresAt: now + ((expires_in - 60) * 1000) };
-        });
+        tokenCache[cacheKey] = { 
+            data: response.data, 
+            expiresAt: now + ((expires_in - 60) * 1000) 
+        };
+        
         return response.data;
 
     } catch (error) {
         const { message } = parseError(error);
-        console.error(`TOKEN_REFRESH_FAILED for ${profile.profileName}:`, message);
+        console.error(`TOKEN_REFRESH_FAILED for ${profile.profileName} (${service}):`, message);
         throw error;
     }
 };

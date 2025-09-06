@@ -17,8 +17,6 @@ import { InvoiceResult } from '@/components/dashboard/inventory/InvoiceResultsDi
 import { useJobTimer } from '@/hooks/useJobTimer';
 import BulkSignup from './pages/BulkSignup';
 import SingleSignup from './pages/SingleSignup';
-import ManageUsers from './pages/ManageUsers'; // ADD THIS IMPORT LINE
-
 
 const queryClient = new QueryClient();
 const SERVER_URL = "http://localhost:3000";
@@ -463,17 +461,6 @@ const MainApp = () => {
                                 onAddProfile={handleOpenAddProfile}
                                 onEditProfile={handleOpenEditProfile}
                                 onDeleteProfile={handleDeleteProfile}
-                            />
-                        }
-                    />
-                    <Route
-                        path="/manage-users"
-                        element={
-                            <ManageUsers
-                                onAddProfile={handleOpenAddProfile}
-                                onEditProfile={handleOpenEditProfile}
-                                onDeleteProfile={handleDeleteProfile}
-                                socket={socketRef.current}
                             />
                         }
                     />

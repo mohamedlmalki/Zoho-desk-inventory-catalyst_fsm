@@ -38,7 +38,6 @@ app.post('/api/zoho/auth', (req, res) => {
 
     setTimeout(() => delete authStates[state], 300000);
 
-    // CORRECTED: Added ZohoCatalyst.projects.users.READ to this line
     const combinedScopes = 'Desk.tickets.ALL,Desk.settings.ALL,Desk.basic.READ,ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL,ZohoInventory.settings.UPDATE,ZohoInventory.settings.READ,ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,ZohoCatalyst.projects.users.DELETE';
     const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=${combinedScopes}&client_id=${clientId}&response_type=code&access_type=offline&redirect_uri=${REDIRECT_URI}&prompt=consent&state=${state}`;
     
@@ -306,9 +305,6 @@ io.on('connection', (socket) => {
     // --- ZOHO CATALYST LISTENERS ---
     const catalystListeners = {
         'startBulkSignup': catalystHandler.handleStartBulkSignup,
-        // NEW: Add new event handlers
-        'catalyst:getAllUsers': catalystHandler.handleGetAllUsers,
-        'catalyst:deleteUsers': catalystHandler.handleDeleteUsers,
     };
 
     for (const [event, handler] of Object.entries(catalystListeners)) {
@@ -318,8 +314,6 @@ io.on('connection', (socket) => {
             handler(socket, { ...data, activeProfile });
         });
     }
-	
-	
 	
 });
 
