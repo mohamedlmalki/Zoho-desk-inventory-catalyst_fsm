@@ -103,14 +103,12 @@ const getValidAccessToken = async (profile, service) => {
         return tokenCache[cacheKey].data;
     }
 
-    // *** FIX: Define scopes for each service ***
     const scopes = {
         desk: 'Desk.tickets.ALL,Desk.settings.ALL,Desk.basic.READ',
         inventory: 'ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL',
         catalyst: 'ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,ZohoCatalyst.projects.users.DELETE',
     };
     
-    // *** FIX: Request token using only the scopes needed for the current service ***
     const requiredScope = scopes[service];
     if (!requiredScope) {
         throw new Error(`Invalid service specified: ${service}`);
@@ -122,7 +120,7 @@ const getValidAccessToken = async (profile, service) => {
             client_id: profile.clientId,
             client_secret: profile.clientSecret,
             grant_type: 'refresh_token',
-            scope: requiredScope // Use the specific scope here
+            scope: requiredScope
         });
 
         const response = await axios.post('https://accounts.zoho.com/oauth/v2/token', params);
@@ -131,7 +129,6 @@ const getValidAccessToken = async (profile, service) => {
             throw new Error(response.data.error);
         }
         
-        // *** FIX: Cache the token only for the specific service it was requested for ***
         const { expires_in } = response.data;
         tokenCache[cacheKey] = { 
             data: response.data, 
@@ -178,6 +175,21 @@ const makeApiCall = async (method, relativeUrl, data, profile, service) => {
 
     const params = service === 'inventory' && serviceConfig.orgId ? { organization_id: serviceConfig.orgId } : {};
     
+    // --- FIX STARTS HERE ---
+    const axiosConfig = {
+        method,
+        url: fullUrl,
+        data,
+        headers,
+        params
+    };
+
+    // For Catalyst GET requests, get the raw response as a string to prevent JSON parsing issues with large numbers.
+    if (service === 'catalyst' && method.toLowerCase() === 'get') {
+        axiosConfig.transformResponse = [responseData => responseData];
+    }
+    // --- FIX ENDS HERE ---
+    
     console.log("\n--- ZOHO API CALL ---");
     console.log(`[${new Date().toISOString()}]`);
     console.log(`Profile: ${profile.profileName}, Service: ${service}`);
@@ -189,7 +201,7 @@ const makeApiCall = async (method, relativeUrl, data, profile, service) => {
     }
     console.log("---------------------\n");
     
-    return axios({ method, url: fullUrl, data, headers, params });
+    return axios(axiosConfig);
 };
 
 

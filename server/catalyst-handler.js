@@ -135,14 +135,24 @@ const handleGetUsers = async (socket, data) => {
         }
 
         const projectId = activeProfile.catalyst.projectId;
-        const start = (page - 1) * per_page + 1; // Zoho uses 1-based indexing for start
+        const start = (page - 1) * per_page + 1;
         
         console.log(`[CATALYST_HANDLER] Fetching users for project ${projectId}, start: ${start}, end: ${per_page}`);
 
         const response = await makeApiCall('get', `/baas/v1/project/${projectId}/project-user?start=${start}&end=${per_page}`, null, activeProfile, 'catalyst');
         
-        console.log('[CATALYST_HANDLER] Successfully fetched users. Count:', response.data.data.length);
-        socket.emit('usersResult', { success: true, users: response.data.data });
+        // --- FIX STARTS HERE ---
+        // Manually parse the JSON response to prevent precision loss on large user IDs.
+        const jsonString = response.data;
+
+        // This regex finds keys like "user_id" followed by a large number and wraps the number in quotes.
+        const safeJsonString = jsonString.replace(/"(user_id|zuid|zaaid)":\s*(\d{16,})/g, '"$1": "$2"');
+        
+        const parsedData = JSON.parse(safeJsonString);
+        // --- FIX ENDS HERE ---
+
+        console.log('[CATALYST_HANDLER] Successfully fetched users. Count:', parsedData.data.length);
+        socket.emit('usersResult', { success: true, users: parsedData.data });
     } catch (error) {
         console.error('[CATALYST_HANDLER] Error in handleGetUsers:', error);
         const { message, fullResponse } = parseError(error);
