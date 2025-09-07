@@ -126,9 +126,61 @@ const handleSingleSignup = async (data) => {
     }
 };
 
+const handleGetUsers = async (socket, data) => {
+    console.log('[CATALYST_HANDLER] Received getUsers request with data:', data);
+    try {
+        const { activeProfile, page, per_page } = data;
+        if (!activeProfile || !activeProfile.catalyst || !activeProfile.catalyst.projectId) {
+            throw new Error('Catalyst profile or Project ID is not configured.');
+        }
+
+        const projectId = activeProfile.catalyst.projectId;
+        const start = (page - 1) * per_page + 1; // Zoho uses 1-based indexing for start
+        
+        console.log(`[CATALYST_HANDLER] Fetching users for project ${projectId}, start: ${start}, end: ${per_page}`);
+
+        const response = await makeApiCall('get', `/baas/v1/project/${projectId}/project-user?start=${start}&end=${per_page}`, null, activeProfile, 'catalyst');
+        
+        console.log('[CATALYST_HANDLER] Successfully fetched users. Count:', response.data.data.length);
+        socket.emit('usersResult', { success: true, users: response.data.data });
+    } catch (error) {
+        console.error('[CATALYST_HANDLER] Error in handleGetUsers:', error);
+        const { message, fullResponse } = parseError(error);
+        socket.emit('usersResult', { success: false, error: message, fullResponse });
+    }
+};
+
+const handleDeleteUser = async (socket, data) => {
+    console.log('[CATALYST_HANDLER] Received deleteUser request with data:', data);
+    try {
+        const { activeProfile, userId } = data;
+        if (!activeProfile || !activeProfile.catalyst || !activeProfile.catalyst.projectId) {
+            throw new Error('Catalyst profile or Project ID is not configured.');
+        }
+
+        if (!userId) {
+            throw new Error('User ID is missing in the delete request.');
+        }
+
+        const projectId = activeProfile.catalyst.projectId;
+        console.log(`[CATALYST_HANDLER] Deleting user with ID: ${userId} from project ${projectId}`);
+
+        const response = await makeApiCall('delete', `/baas/v1/project/${projectId}/project-user/${userId}`, null, activeProfile, 'catalyst');
+        
+        console.log('[CATALYST_HANDLER] Successfully deleted user. Response:', response.data);
+        socket.emit('userDeletedResult', { success: true, ...response.data });
+    } catch (error) {
+        console.error('[CATALYST_HANDLER] Error in handleDeleteUser:', error);
+        const { message, fullResponse } = parseError(error);
+        socket.emit('userDeletedResult', { success: false, error: message, fullResponse });
+    }
+};
+
 
 module.exports = {
     setActiveJobs,
     handleStartBulkSignup,
     handleSingleSignup,
+    handleGetUsers,
+    handleDeleteUser,
 };

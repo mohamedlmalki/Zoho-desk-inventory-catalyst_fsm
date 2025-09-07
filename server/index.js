@@ -305,6 +305,8 @@ io.on('connection', (socket) => {
     // --- ZOHO CATALYST LISTENERS ---
     const catalystListeners = {
         'startBulkSignup': catalystHandler.handleStartBulkSignup,
+        'getUsers': catalystHandler.handleGetUsers,
+        'deleteUser': catalystHandler.handleDeleteUser,
     };
 
     for (const [event, handler] of Object.entries(catalystListeners)) {

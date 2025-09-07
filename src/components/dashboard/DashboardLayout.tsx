@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Ticket, UserPlus, Package, BarChart3, Cloud } from 'lucide-react'; 
+import { Ticket, UserPlus, Package, BarChart3, Cloud, Users } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
 import { ProfileSelector } from './ProfileSelector';
 import { Profile, Jobs, InvoiceJobs } from '@/App';
@@ -115,6 +115,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 <SidebarNavLink to="/single-signup">
                    <Cloud className="h-4 w-4" />
                   Single Signup
+                </SidebarNavLink>
+                 <SidebarNavLink to="/catalyst-users">
+                    <Users className="h-4 w-4" />
+                    Manage Users
                 </SidebarNavLink>
               </div>
             </nav>

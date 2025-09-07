@@ -17,6 +17,7 @@ import { InvoiceResult } from '@/components/dashboard/inventory/InvoiceResultsDi
 import { useJobTimer } from '@/hooks/useJobTimer';
 import BulkSignup from './pages/BulkSignup';
 import SingleSignup from './pages/SingleSignup';
+import CatalystUsers from './pages/CatalystUsers';
 
 const queryClient = new QueryClient();
 const SERVER_URL = "http://localhost:3000";
@@ -458,6 +459,17 @@ const MainApp = () => {
                         path="/single-signup"
                         element={
                             <SingleSignup
+                                onAddProfile={handleOpenAddProfile}
+                                onEditProfile={handleOpenEditProfile}
+                                onDeleteProfile={handleDeleteProfile}
+                            />
+                        }
+                    />
+                    <Route
+                        path="/catalyst-users"
+                        element={
+                            <CatalystUsers
+                                socket={socketRef.current}
                                 onAddProfile={handleOpenAddProfile}
                                 onEditProfile={handleOpenEditProfile}
                                 onDeleteProfile={handleDeleteProfile}
