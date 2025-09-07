@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+const FormData = require('form-data'); 
 
 const PROFILES_PATH = path.join(__dirname, 'profiles.json');
 const TICKET_LOG_PATH = path.join(__dirname, 'ticket-log.json');
@@ -102,12 +103,14 @@ const getValidAccessToken = async (profile, service) => {
     if (tokenCache[cacheKey] && tokenCache[cacheKey].data.access_token && tokenCache[cacheKey].expiresAt > now) {
         return tokenCache[cacheKey].data;
     }
-
+    
+    // --- FIX STARTS HERE ---
     const scopes = {
         desk: 'Desk.tickets.ALL,Desk.settings.ALL,Desk.basic.READ',
         inventory: 'ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL',
-        catalyst: 'ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,ZohoCatalyst.projects.users.DELETE',
+        catalyst: 'ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,ZohoCatalyst.projects.users.DELETE,ZohoCatalyst.email.CREATE,ZohoCatalyst.email.CREATE',
     };
+    // --- FIX ENDS HERE ---
     
     const requiredScope = scopes[service];
     if (!requiredScope) {
@@ -175,7 +178,6 @@ const makeApiCall = async (method, relativeUrl, data, profile, service) => {
 
     const params = service === 'inventory' && serviceConfig.orgId ? { organization_id: serviceConfig.orgId } : {};
     
-    // --- FIX STARTS HERE ---
     const axiosConfig = {
         method,
         url: fullUrl,
@@ -183,12 +185,14 @@ const makeApiCall = async (method, relativeUrl, data, profile, service) => {
         headers,
         params
     };
+    
+    if (data instanceof FormData) {
+        headers['Content-Type'] = `multipart/form-data; boundary=${data.getBoundary()}`;
+    }
 
-    // For Catalyst GET requests, get the raw response as a string to prevent JSON parsing issues with large numbers.
     if (service === 'catalyst' && method.toLowerCase() === 'get') {
         axiosConfig.transformResponse = [responseData => responseData];
     }
-    // --- FIX ENDS HERE ---
     
     console.log("\n--- ZOHO API CALL ---");
     console.log(`[${new Date().toISOString()}]`);
@@ -197,7 +201,7 @@ const makeApiCall = async (method, relativeUrl, data, profile, service) => {
     console.log("Headers:", JSON.stringify(headers, (key, value) => key === 'Authorization' ? '[REDACTED]' : value, 2));
     console.log("Params:", JSON.stringify(params, null, 2));
     if (data) {
-        console.log("Body:", JSON.stringify(data, null, 2));
+        console.log("Body:", data instanceof FormData ? 'FormData Object' : JSON.stringify(data, null, 2));
     }
     console.log("---------------------\n");
     

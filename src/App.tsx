@@ -18,6 +18,8 @@ import { useJobTimer } from '@/hooks/useJobTimer';
 import BulkSignup from './pages/BulkSignup';
 import SingleSignup from './pages/SingleSignup';
 import CatalystUsers from './pages/CatalystUsers';
+import BulkEmail from './pages/BulkEmail'; // <-- New Import
+import { EmailResult } from './components/dashboard/catalyst/EmailResultsDisplay'; // <-- New Import
 
 const queryClient = new QueryClient();
 const SERVER_URL = "http://localhost:3000";
@@ -42,6 +44,31 @@ export interface InvoiceFormData {
   sendCustomEmail: boolean;
   sendDefaultEmail: boolean;
 }
+
+// --- NEW: Interfaces for Bulk Email ---
+export interface EmailFormData {
+    emails: string;
+    subject: string;
+    content: string;
+    delay: number;
+}
+export interface EmailJobState {
+    formData: EmailFormData;
+    results: EmailResult[];
+    isProcessing: boolean;
+    isPaused: boolean;
+    isComplete: boolean;
+    processingStartTime: Date | null;
+    processingTime: number;
+    totalToProcess: number;
+    countdown: number;
+    currentDelay: number;
+    filterText: string;
+}
+export interface EmailJobs {
+    [profileName: string]: EmailJobState;
+}
+// --- End New Interfaces ---
 
 export interface TicketResult {
   email: string;
@@ -135,6 +162,7 @@ export interface Profile {
   };
   catalyst?: {
     projectId: string;
+    fromEmail?: string; // <-- New Optional Field
   };
 }
 
@@ -202,12 +230,32 @@ const createInitialCatalystJobState = (): CatalystJobState => ({
     filterText: '',
 });
 
+// --- NEW: Initial state for Email Jobs ---
+const createInitialEmailJobState = (): EmailJobState => ({
+    formData: {
+        emails: '',
+        subject: '',
+        content: '',
+        delay: 1,
+    },
+    results: [],
+    isProcessing: false,
+    isPaused: false,
+    isComplete: false,
+    processingStartTime: null,
+    processingTime: 0,
+    totalToProcess: 0,
+    countdown: 0,
+    currentDelay: 1,
+    filterText: '',
+});
 
 const MainApp = () => {
     const { toast } = useToast();
     const [jobs, setJobs] = useState<Jobs>({});
     const [invoiceJobs, setInvoiceJobs] = useState<InvoiceJobs>({});
     const [catalystJobs, setCatalystJobs] = useState<CatalystJobs>({}); 
+    const [emailJobs, setEmailJobs] = useState<EmailJobs>({}); // <-- New State
     const socketRef = useRef<Socket | null>(null);
     const queryClient = useQueryClient();
 
@@ -217,6 +265,7 @@ const MainApp = () => {
     useJobTimer(jobs, setJobs, 'ticket');
     useJobTimer(invoiceJobs, setInvoiceJobs, 'invoice');
     useJobTimer(catalystJobs, setCatalystJobs, 'catalyst'); 
+    useJobTimer(emailJobs, setEmailJobs, 'email'); // <-- New Timer
 
     useEffect(() => {
         const socket = io(SERVER_URL);
@@ -300,8 +349,25 @@ const MainApp = () => {
           });
         });
 
+        // --- NEW: Socket listener for Email Results ---
+        socket.on('emailResult', (result: EmailResult & { profileName: string }) => {
+          setEmailJobs(prevJobs => {
+            const profileJob = prevJobs[result.profileName];
+            if (!profileJob) return prevJobs;
+            const isLast = profileJob.results.length + 1 >= profileJob.totalToProcess;
+            return {
+              ...prevJobs,
+              [result.profileName]: {
+                ...profileJob,
+                results: [...profileJob.results, result],
+                countdown: isLast ? 0 : profileJob.currentDelay,
+              }
+            };
+          });
+        });
 
-        const handleJobCompletion = (data: {profileName: string, jobType: 'ticket' | 'invoice' | 'catalyst'}, title: string, description: string, variant?: "destructive") => {
+
+        const handleJobCompletion = (data: {profileName: string, jobType: 'ticket' | 'invoice' | 'catalyst' | 'email'}, title: string, description: string, variant?: "destructive") => {
             const { profileName, jobType } = data;
             const updater = (prev: any) => {
                 if (!prev[profileName]) return prev;
@@ -314,6 +380,8 @@ const MainApp = () => {
                 setInvoiceJobs(updater);
             } else if (jobType === 'catalyst') { 
                 setCatalystJobs(updater);
+            } else if (jobType === 'email') { // <-- New Type
+                setEmailJobs(updater);
             }
             toast({ title, description, variant });
         };
@@ -470,6 +538,21 @@ const MainApp = () => {
                         element={
                             <CatalystUsers
                                 socket={socketRef.current}
+                                onAddProfile={handleOpenAddProfile}
+                                onEditProfile={handleOpenEditProfile}
+                                onDeleteProfile={handleDeleteProfile}
+                            />
+                        }
+                    />
+                    {/* --- NEW: Route for Bulk Email --- */}
+                    <Route
+                        path="/bulk-email"
+                        element={
+                            <BulkEmail
+                                jobs={emailJobs}
+                                setJobs={setEmailJobs}
+                                socket={socketRef.current}
+                                createInitialJobState={createInitialEmailJobState}
                                 onAddProfile={handleOpenAddProfile}
                                 onEditProfile={handleOpenEditProfile}
                                 onDeleteProfile={handleDeleteProfile}

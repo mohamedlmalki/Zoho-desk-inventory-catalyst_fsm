@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Profile } from '@/App';
 import { useToast } from '@/hooks/use-toast';
-import { KeyRound, Loader2, Building, Briefcase, Cloud } from 'lucide-react'; // Added Cloud icon
+import { KeyRound, Loader2, Building, Briefcase, Cloud, Mail } from 'lucide-react';
 import { Socket } from 'socket.io-client';
 import { Separator } from '../ui/separator';
 
@@ -33,9 +33,9 @@ const getInitialFormData = (): Profile => ({
   inventory: {
     orgId: '',
   },
-  // NEW: Added catalyst to initial state
   catalyst: {
     projectId: '',
+    fromEmail: '', // <-- New Field
   },
 });
 
@@ -53,7 +53,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onS
                 ...profile,
                 desk: { ...getInitialFormData().desk, ...profile.desk },
                 inventory: { ...getInitialFormData().inventory, ...profile.inventory },
-                // NEW: Ensure catalyst data is merged correctly
                 catalyst: { ...getInitialFormData().catalyst, ...profile.catalyst },
             });
         } else {
@@ -90,7 +89,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onS
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // UPDATED: handleNestedChange now supports 'catalyst'
   const handleNestedChange = (service: 'desk' | 'inventory' | 'catalyst', e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -227,7 +225,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onS
 
           <Separator className="my-4" />
 
-          {/* --- NEW: ZOHO CATALYST SETTINGS --- */}
+          {/* --- ZOHO CATALYST SETTINGS --- */}
           <div>
             <h4 className="text-sm font-semibold mb-4 flex items-center">
               <Cloud className="h-4 w-4 mr-2" />
@@ -235,8 +233,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onS
             </h4>
             <div className="grid gap-4 pl-4 border-l-2 ml-2">
                 <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="catalyst_projectId" className="text-right">Project ID</Label>
-                <Input id="catalyst_projectId" name="projectId" value={formData.catalyst?.projectId || ''} onChange={(e) => handleNestedChange('catalyst', e)} className="col-span-3" />
+                  <Label htmlFor="catalyst_projectId" className="text-right">Project ID</Label>
+                  <Input id="catalyst_projectId" name="projectId" value={formData.catalyst?.projectId || ''} onChange={(e) => handleNestedChange('catalyst', e)} className="col-span-3" />
+                </div>
+                {/* --- NEW FIELD --- */}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="catalyst_fromEmail" className="text-right">From Email</Label>
+                  <Input id="catalyst_fromEmail" name="fromEmail" value={formData.catalyst?.fromEmail || ''} onChange={(e) => handleNestedChange('catalyst', e)} className="col-span-3" placeholder="(Optional) Verified sender" />
                 </div>
             </div>
           </div>

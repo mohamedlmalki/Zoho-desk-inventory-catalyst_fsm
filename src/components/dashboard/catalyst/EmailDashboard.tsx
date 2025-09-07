@@ -3,9 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Socket } from 'socket.io-client';
 import { DashboardLayout } from '../DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
-import { Profile, CatalystJobs, CatalystJobState, CatalystSignupFormData } from '@/App';
-import { SignupForm } from './SignupForm';
-import { SignupResultsDisplay } from './SignupResultsDisplay';
+import { Profile, EmailJobs, EmailJobState, EmailFormData } from '@/App';
+import { EmailForm } from './EmailForm';
+import { EmailResultsDisplay } from './EmailResultsDisplay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -15,11 +15,11 @@ type ApiStatus = {
   fullResponse?: any;
 };
 
-interface CatalystDashboardProps {
-  jobs: CatalystJobs;
-  setJobs: React.Dispatch<React.SetStateAction<CatalystJobs>>;
+interface EmailDashboardProps {
+  jobs: EmailJobs;
+  setJobs: React.Dispatch<React.SetStateAction<EmailJobs>>;
   socket: Socket | null;
-  createInitialJobState: () => CatalystJobState;
+  createInitialJobState: () => EmailJobState;
   onAddProfile: () => void;
   onEditProfile: (profile: Profile) => void;
   onDeleteProfile: (profileName: string) => void;
@@ -27,12 +27,12 @@ interface CatalystDashboardProps {
 
 const SERVER_URL = "http://localhost:3000";
 
-export const CatalystDashboard: React.FC<CatalystDashboardProps> = ({
-    jobs,
-    setJobs,
-    socket,
+export const EmailDashboard: React.FC<EmailDashboardProps> = ({ 
+    jobs, 
+    setJobs, 
+    socket, 
     createInitialJobState,
-    onAddProfile,
+    onAddProfile, 
     onEditProfile,
     onDeleteProfile
 }) => {
@@ -40,7 +40,7 @@ export const CatalystDashboard: React.FC<CatalystDashboardProps> = ({
   const [activeProfileName, setActiveProfileName] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<ApiStatus>({ status: 'loading', message: 'Connecting to server...', fullResponse: null });
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
-
+  
   const { data: profiles = [] } = useQuery<Profile[]>({
     queryKey: ['profiles'],
     queryFn: async () => {
@@ -71,7 +71,7 @@ export const CatalystDashboard: React.FC<CatalystDashboardProps> = ({
       setActiveProfileName(catalystProfiles[0]?.profileName || null);
     }
   }, [catalystProfiles, activeProfileName, setJobs, createInitialJobState]);
-
+  
   useEffect(() => {
     if (!socket) return;
     const handleApiStatus = (result: any) => setApiStatus({
@@ -96,15 +96,15 @@ export const CatalystDashboard: React.FC<CatalystDashboardProps> = ({
     setActiveProfileName(profileName);
     toast({ title: "Profile Changed", description: `Switched to ${profileName}` });
   };
-
+  
   const handleManualVerify = () => {
     if (!socket || !activeProfileName) return;
     setApiStatus({ status: 'loading', message: 'Checking API connection...', fullResponse: null });
     socket.emit('checkApiStatus', { selectedProfileName: activeProfileName, service: 'catalyst' });
     toast({ title: "Re-checking Connection..." });
   };
-
-  const handleFormDataChange = (newFormData: CatalystSignupFormData) => {
+  
+  const handleFormDataChange = (newFormData: EmailFormData) => {
     if (activeProfileName) {
         setJobs(prev => ({
             ...prev,
@@ -118,9 +118,21 @@ export const CatalystDashboard: React.FC<CatalystDashboardProps> = ({
 
   const handleFormSubmit = () => {
     if (!socket || !activeProfileName || !jobs[activeProfileName]) return;
+    
+    // --- FIX STARTS HERE ---
+    const selectedProfile = catalystProfiles.find(p => p.profileName === activeProfileName);
+    if (!selectedProfile?.catalyst?.fromEmail) {
+        toast({ 
+            title: "Configuration Error", 
+            description: "A 'From Email' address must be set in the profile settings for this feature.", 
+            variant: "destructive"
+        });
+        return;
+    }
+    // --- FIX ENDS HERE ---
 
-    const currentFormData = jobs[activeProfileName].formData;
-    const emails = currentFormData.emails.split('\n').map((e: string) => e.trim()).filter(Boolean);
+    const currentJob = jobs[activeProfileName];
+    const emails = currentJob.formData.emails.split('\n').map((e: string) => e.trim()).filter(Boolean);
     if (emails.length === 0) {
         toast({ title: "No emails provided", variant: "destructive" });
         return;
@@ -130,19 +142,20 @@ export const CatalystDashboard: React.FC<CatalystDashboardProps> = ({
         ...prev,
         [activeProfileName]: {
             ...prev[activeProfileName],
-            results: [],
+            results: [], 
             isProcessing: true,
             isPaused: false,
             isComplete: false,
             processingStartTime: new Date(),
-            processingTime: 0, // <-- FIX: Reset the processing time here
+            processingTime: 0,
             totalToProcess: emails.length,
-            currentDelay: currentFormData.delay,
+            currentDelay: currentJob.formData.delay,
             filterText: '',
         }
     }));
-    socket.emit('startBulkSignup', {
-        ...currentFormData,
+
+    socket.emit('startBulkEmail', {
+        ...currentJob.formData,
         emails,
         selectedProfileName: activeProfileName
     });
@@ -157,14 +170,14 @@ export const CatalystDashboard: React.FC<CatalystDashboardProps> = ({
   const handlePauseResume = () => {
     if (!socket || !activeProfileName) return;
     const isPaused = jobs[activeProfileName]?.isPaused;
-    socket.emit(isPaused ? 'resumeJob' : 'pauseJob', { profileName: activeProfileName, jobType: 'catalyst' });
+    socket.emit(isPaused ? 'resumeJob' : 'pauseJob', { profileName: activeProfileName, jobType: 'email' });
     setJobs(prev => ({ ...prev, [activeProfileName]: { ...prev[activeProfileName], isPaused: !isPaused }}));
     toast({ title: `Job ${isPaused ? 'Resumed' : 'Paused'}` });
   };
 
   const handleEndJob = () => {
     if (!socket || !activeProfileName) return;
-    socket.emit('endJob', { profileName: activeProfileName, jobType: 'catalyst' });
+    socket.emit('endJob', { profileName: activeProfileName, jobType: 'email' });
   };
 
   const selectedProfile = catalystProfiles.find(p => p.profileName === activeProfileName) || null;
@@ -188,18 +201,19 @@ export const CatalystDashboard: React.FC<CatalystDashboardProps> = ({
         <div className="space-y-8">
           {currentJob && (
               <>
-                  <SignupForm
+                  <EmailForm 
                       jobState={currentJob}
                       formData={currentJob.formData}
                       onFormDataChange={handleFormDataChange}
-                      onSubmit={handleFormSubmit}
+                      onSubmit={handleFormSubmit} 
                       isProcessing={currentJob.isProcessing}
                       isPaused={currentJob.isPaused}
                       onPauseResume={handlePauseResume}
                       onEndJob={handleEndJob}
+                      fromEmail={selectedProfile?.catalyst?.fromEmail || ''}
                   />
-                  <SignupResultsDisplay
-                      results={currentJob.results}
+                  <EmailResultsDisplay
+                      results={currentJob.results} 
                       isProcessing={currentJob.isProcessing}
                       isComplete={currentJob.isComplete}
                       totalToProcess={currentJob.totalToProcess}

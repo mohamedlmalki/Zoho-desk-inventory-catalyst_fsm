@@ -38,7 +38,10 @@ app.post('/api/zoho/auth', (req, res) => {
 
     setTimeout(() => delete authStates[state], 300000);
 
-    const combinedScopes = 'Desk.tickets.ALL,Desk.settings.ALL,Desk.basic.READ,ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL,ZohoInventory.settings.UPDATE,ZohoInventory.settings.READ,ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,ZohoCatalyst.projects.users.DELETE';
+    // --- FIX STARTS HERE ---
+    const combinedScopes = 'Desk.tickets.ALL,Desk.settings.ALL,Desk.basic.READ,ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL,ZohoInventory.settings.UPDATE,ZohoInventory.settings.READ,ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,ZohoCatalyst.projects.users.DELETE,ZohoCatalyst.email.CREATE,ZohoCatalyst.email.CREATE';
+    // --- FIX ENDS HERE ---
+    
     const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=${combinedScopes}&client_id=${clientId}&response_type=code&access_type=offline&redirect_uri=${REDIRECT_URI}&prompt=consent&state=${state}`;
     
     res.json({ authUrl });
@@ -187,7 +190,6 @@ app.delete('/api/profiles/:profileNameToDelete', (req, res) => {
 io.on('connection', (socket) => {
     console.log(`[INFO] New connection. Socket ID: ${socket.id}`);
 
-    // --- GENERIC AND UTILITY LISTENERS ---
     socket.on('checkApiStatus', async (data) => {
         try {
             const { selectedProfileName, service = 'desk' } = data;
@@ -267,7 +269,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // --- ZOHO DESK LISTENERS (delegated to desk-handler) ---
     const deskListeners = {
         'startBulkCreate': deskHandler.handleStartBulkCreate,
         'getEmailFailures': deskHandler.handleGetEmailFailures,
@@ -285,7 +286,6 @@ io.on('connection', (socket) => {
         });
     }
 
-    // --- ZOHO INVENTORY LISTENERS (delegated to inventory-handler) ---
     const inventoryListeners = {
         'startBulkInvoice': inventoryHandler.handleStartBulkInvoice,
         'getOrgDetails': inventoryHandler.handleGetOrgDetails,
@@ -302,11 +302,12 @@ io.on('connection', (socket) => {
         });
     }
     
-    // --- ZOHO CATALYST LISTENERS ---
     const catalystListeners = {
         'startBulkSignup': catalystHandler.handleStartBulkSignup,
+        'startBulkEmail': catalystHandler.handleStartBulkEmail,
         'getUsers': catalystHandler.handleGetUsers,
         'deleteUser': catalystHandler.handleDeleteUser,
+        'deleteUsers': catalystHandler.handleDeleteUsers,
     };
 
     for (const [event, handler] of Object.entries(catalystListeners)) {
