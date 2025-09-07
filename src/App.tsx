@@ -51,6 +51,7 @@ export interface EmailFormData {
     subject: string;
     content: string;
     delay: number;
+	displayName: string; // Add this line
 }
 export interface EmailJobState {
     formData: EmailFormData;
@@ -237,6 +238,7 @@ const createInitialEmailJobState = (): EmailJobState => ({
         subject: '',
         content: '',
         delay: 1,
+		displayName: '', // Add this line
     },
     results: [],
     isProcessing: false,

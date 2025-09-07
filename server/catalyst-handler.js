@@ -28,7 +28,7 @@ const interruptibleSleep = (ms, jobId) => {
 
 const handleStartBulkEmail = async (socket, data) => {
     console.log('[EMAIL_HANDLER] Received startBulkEmail request.');
-    const { emails, subject, content, delay, selectedProfileName, activeProfile } = data;
+    const { emails, subject, content, delay, selectedProfileName, activeProfile, displayName } = data;
     const jobId = createJobId(socket.id, selectedProfileName, 'email');
     activeJobs[jobId] = { status: 'running' };
 
@@ -65,6 +65,9 @@ const handleStartBulkEmail = async (socket, data) => {
                 formData.append('subject', subject);
                 formData.append('content', content);
                 formData.append('html_mode', 'true');
+                if (displayName) {
+                    formData.append('display_name', displayName);
+                }
                 
                 console.log(`[EMAIL_HANDLER] Sending API call for ${email}`);
                 const response = await makeApiCall('post', `/baas/v1/project/${projectId}/email/send`, formData, activeProfile, 'catalyst');

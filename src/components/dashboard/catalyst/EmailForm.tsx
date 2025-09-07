@@ -191,6 +191,16 @@ export const EmailForm: React.FC<EmailFormProps> = ({
                   This address is configured in your profile settings.
                 </p>
               </div>
+			  <div className="space-y-2">
+                <Label htmlFor="displayName">Display Name</Label>
+                <Input
+                  id="displayName"
+                  value={formData.displayName}
+                  onChange={(e) => handleInputChange('displayName', e.target.value)}
+                  placeholder="Enter sender name"
+                  disabled={isProcessing}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="subject">Email Subject</Label>
                 <Input
