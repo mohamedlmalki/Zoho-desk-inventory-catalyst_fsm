@@ -47,5 +47,47 @@
       "projectId": "40748000000016001",
       "fromEmail": "med217623@gmail.com"
     }
+  },
+  {
+    "profileName": "zoho_fsm",
+    "clientId": "1000.TL5800Q6EZKJQVM9VMM7F0FS6TO5IK",
+    "clientSecret": "7051d78d02256c9ae597428eb255841481acab97f3",
+    "refreshToken": "1000.8ca4413b5ea476cea53e3fbac6b5aa84.080b9ab34fb5f04895fce63c3b4721d9",
+    "desk": {
+      "orgId": "",
+      "defaultDepartmentId": "",
+      "fromEmailAddress": "",
+      "mailReplyAddressId": ""
+    },
+    "inventory": {
+      "orgId": ""
+    },
+    "catalyst": {
+      "projectId": "",
+      "fromEmail": ""
+    },
+    "fsm": {}
+  },
+  {
+    "profileName": "qntrl",
+    "clientId": "1000.3Y07NOL1IXVE4DM4L7VCY2EYZ9XX7R",
+    "clientSecret": "07e080c8e05840fed95de36ab3f9d66b3355a7faa7",
+    "refreshToken": "1000.4846961b4856a2e496f2c0aa0e501955.4be11f5663abb52d0a4a7bd2fff43a5c",
+    "desk": {
+      "orgId": "",
+      "defaultDepartmentId": "",
+      "fromEmailAddress": "",
+      "mailReplyAddressId": ""
+    },
+    "inventory": {
+      "orgId": ""
+    },
+    "catalyst": {
+      "projectId": "",
+      "fromEmail": ""
+    },
+    "qntrl": {
+      "orgId": "postesrt"
+    }
   }
 ]

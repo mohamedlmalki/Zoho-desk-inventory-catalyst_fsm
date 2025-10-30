@@ -7,6 +7,7 @@ const { readProfiles, writeProfiles, parseError, getValidAccessToken, makeApiCal
 const deskHandler = require('./desk-handler');
 const inventoryHandler = require('./inventory-handler');
 const catalystHandler = require('./catalyst-handler');
+const qntrlHandler = require('./qntrl-handler'); // --- MODIFICATION HERE ---
 require('dotenv').config();
 
 const app = express();
@@ -20,6 +21,7 @@ const activeJobs = {};
 deskHandler.setActiveJobs(activeJobs);
 inventoryHandler.setActiveJobs(activeJobs);
 catalystHandler.setActiveJobs(activeJobs);
+qntrlHandler.setActiveJobs(activeJobs); // --- MODIFICATION HERE ---
 
 const authStates = {};
 
@@ -38,9 +40,15 @@ app.post('/api/zoho/auth', (req, res) => {
 
     setTimeout(() => delete authStates[state], 300000);
 
-    // --- FIX STARTS HERE ---
-    const combinedScopes = 'Desk.tickets.ALL,Desk.settings.ALL,Desk.basic.READ,ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL,ZohoInventory.settings.UPDATE,ZohoInventory.settings.READ,ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,ZohoCatalyst.projects.users.DELETE,ZohoCatalyst.email.CREATE,ZohoCatalyst.email.CREATE';
-    // --- FIX ENDS HERE ---
+    // --- MODIFICATION HERE ---
+    // This list now EXACTLY matches your successful token
+    const combinedScopes = [
+        'Desk.tickets.ALL,Desk.settings.ALL,Desk.basic.READ',
+        'ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL,ZohoInventory.settings.UPDATE,ZohoInventory.settings.READ',
+        'ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,ZohoCatalyst.projects.users.DELETE,ZohoCatalyst.email.CREATE,ZohoCatalyst.email.CREATE',
+        'Qntrl.emailalert.READ,Qntrl.emailalert.CREATE,Qntrl.emailalert.UPDATE,Qntrl.emailalert.DELETE,Qntrl.emailtemplate.READ,Qntrl.emailtemplate.CREATE,Qntrl.emailtemplate.UPDATE,Qntrl.emailtemplate.DELETE,Qntrl.job.READ,Qntrl.job.CREATE,Qntrl.job.UPDATE,Qntrl.job.DELETE,Qntrl.job.ALL,Qntrl.user.READ'
+    ].join(',');
+    // --- END MODIFICATION ---
     
     const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=${combinedScopes}&client_id=${clientId}&response_type=code&access_type=offline&redirect_uri=${REDIRECT_URI}&prompt=consent&state=${state}`;
     
@@ -222,7 +230,7 @@ io.on('connection', (socket) => {
                     orgName: `Project ID: ${projectId.substring(0, 10)}...`,
                     agentInfo: { firstName: 'Catalyst Project', lastName: 'Verified' } 
                 };
-            } else { // Default to 'desk'
+            } else if (service === 'desk') {
                 if (!activeProfile.desk || !activeProfile.desk.orgId) {
                     throw new Error('Desk Organization ID is not configured for this profile.');
                 }
@@ -230,6 +238,20 @@ io.on('connection', (socket) => {
                  validationData = { 
                     agentInfo: agentResponse.data,
                     orgName: agentResponse.data.orgName 
+                };
+            }
+            else if (service === 'qntrl') {
+                // This test requires Qntrl.user.READ
+                const qntrlCheckUrl = `/blueprint/api/user/myinfo`; 
+                const myInfoResponse = await makeApiCall('get', qntrlCheckUrl, null, activeProfile, 'qntrl');
+                
+                validationData = { 
+                    orgName: myInfoResponse.data?.org_name || `Org ID: ${activeProfile.qntrl?.orgId || 'N/A'}`,
+                    agentInfo: { 
+                        firstName: myInfoResponse.data?.first_name || 'Qntrl User', 
+                        lastName: myInfoResponse.data?.last_name || '' 
+                    },
+                    myInfo: myInfoResponse.data 
                 };
             }
 
@@ -318,6 +340,20 @@ io.on('connection', (socket) => {
         });
     }
 	
+    // --- MODIFICATION HERE ---
+    // Added listeners for Qntrl
+    const qntrlListeners = {
+        'getQntrlEmailTemplates': qntrlHandler.handleGetEmailTemplates,
+    };
+
+    for (const [event, handler] of Object.entries(qntrlListeners)) {
+        socket.on(event, (data) => {
+            const profiles = readProfiles();
+            const activeProfile = data ? profiles.find(p => p.profileName === data.selectedProfileName) : null;
+            handler(socket, { ...data, activeProfile });
+        });
+    }
+    // --- END MODIFICATION ---
 });
 
 

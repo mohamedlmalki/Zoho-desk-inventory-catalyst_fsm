@@ -18,8 +18,9 @@ import { useJobTimer } from '@/hooks/useJobTimer';
 import BulkSignup from './pages/BulkSignup';
 import SingleSignup from './pages/SingleSignup';
 import CatalystUsers from './pages/CatalystUsers';
-import BulkEmail from './pages/BulkEmail'; // <-- New Import
-import { EmailResult } from './components/dashboard/catalyst/EmailResultsDisplay'; // <-- New Import
+import BulkEmail from './pages/BulkEmail'; 
+import { EmailResult } from './components/dashboard/catalyst/EmailResultsDisplay'; 
+import QntrlTestPage from './pages/QntrlTestPage'; // --- MODIFICATION: Import new page
 
 const queryClient = new QueryClient();
 const SERVER_URL = "http://localhost:3000";
@@ -45,13 +46,12 @@ export interface InvoiceFormData {
   sendDefaultEmail: boolean;
 }
 
-// --- NEW: Interfaces for Bulk Email ---
 export interface EmailFormData {
     emails: string;
     subject: string;
     content: string;
     delay: number;
-	displayName: string; // Add this line
+	displayName: string; 
 }
 export interface EmailJobState {
     formData: EmailFormData;
@@ -69,7 +69,6 @@ export interface EmailJobState {
 export interface EmailJobs {
     [profileName: string]: EmailJobState;
 }
-// --- End New Interfaces ---
 
 export interface TicketResult {
   email: string;
@@ -163,7 +162,10 @@ export interface Profile {
   };
   catalyst?: {
     projectId: string;
-    fromEmail?: string; // <-- New Optional Field
+    fromEmail?: string; 
+  };
+  qntrl?: {
+    orgId: string; 
   };
 }
 
@@ -231,14 +233,13 @@ const createInitialCatalystJobState = (): CatalystJobState => ({
     filterText: '',
 });
 
-// --- NEW: Initial state for Email Jobs ---
 const createInitialEmailJobState = (): EmailJobState => ({
     formData: {
         emails: '',
         subject: '',
         content: '',
         delay: 1,
-		displayName: '', // Add this line
+		displayName: '', 
     },
     results: [],
     isProcessing: false,
@@ -257,7 +258,7 @@ const MainApp = () => {
     const [jobs, setJobs] = useState<Jobs>({});
     const [invoiceJobs, setInvoiceJobs] = useState<InvoiceJobs>({});
     const [catalystJobs, setCatalystJobs] = useState<CatalystJobs>({}); 
-    const [emailJobs, setEmailJobs] = useState<EmailJobs>({}); // <-- New State
+    const [emailJobs, setEmailJobs] = useState<EmailJobs>({}); 
     const socketRef = useRef<Socket | null>(null);
     const queryClient = useQueryClient();
 
@@ -267,7 +268,7 @@ const MainApp = () => {
     useJobTimer(jobs, setJobs, 'ticket');
     useJobTimer(invoiceJobs, setInvoiceJobs, 'invoice');
     useJobTimer(catalystJobs, setCatalystJobs, 'catalyst'); 
-    useJobTimer(emailJobs, setEmailJobs, 'email'); // <-- New Timer
+    useJobTimer(emailJobs, setEmailJobs, 'email'); 
 
     useEffect(() => {
         const socket = io(SERVER_URL);
@@ -351,7 +352,6 @@ const MainApp = () => {
           });
         });
 
-        // --- NEW: Socket listener for Email Results ---
         socket.on('emailResult', (result: EmailResult & { profileName: string }) => {
           setEmailJobs(prevJobs => {
             const profileJob = prevJobs[result.profileName];
@@ -382,7 +382,7 @@ const MainApp = () => {
                 setInvoiceJobs(updater);
             } else if (jobType === 'catalyst') { 
                 setCatalystJobs(updater);
-            } else if (jobType === 'email') { // <-- New Type
+            } else if (jobType === 'email') { 
                 setEmailJobs(updater);
             }
             toast({ title, description, variant });
@@ -546,7 +546,6 @@ const MainApp = () => {
                             />
                         }
                     />
-                    {/* --- NEW: Route for Bulk Email --- */}
                     <Route
                         path="/bulk-email"
                         element={
@@ -561,6 +560,21 @@ const MainApp = () => {
                             />
                         }
                     />
+                    
+                    {/* --- MODIFICATION HERE --- */}
+                    <Route
+                        path="/qntrl-test"
+                        element={
+                            <QntrlTestPage
+                                socket={socketRef.current}
+                                onAddProfile={handleOpenAddProfile}
+                                onEditProfile={handleOpenEditProfile}
+                                onDeleteProfile={handleDeleteProfile}
+                            />
+                        }
+                    />
+                    {/* --- END MODIFICATION --- */}
+                    
                     <Route path="*" element={<NotFound />} />
                 </Routes>
             </BrowserRouter>

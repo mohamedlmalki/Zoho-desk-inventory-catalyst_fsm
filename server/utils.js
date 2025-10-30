@@ -104,13 +104,15 @@ const getValidAccessToken = async (profile, service) => {
         return tokenCache[cacheKey].data;
     }
     
-    // --- FIX STARTS HERE ---
+    // --- MODIFICATION HERE ---
+    // This list now EXACTLY matches your successful token response
     const scopes = {
         desk: 'Desk.tickets.ALL,Desk.settings.ALL,Desk.basic.READ',
         inventory: 'ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL',
         catalyst: 'ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,ZohoCatalyst.projects.users.DELETE,ZohoCatalyst.email.CREATE,ZohoCatalyst.email.CREATE',
+        qntrl: 'Qntrl.emailalert.READ,Qntrl.emailalert.CREATE,Qntrl.emailalert.UPDATE,Qntrl.emailalert.DELETE,Qntrl.emailtemplate.READ,Qntrl.emailtemplate.CREATE,Qntrl.emailtemplate.UPDATE,Qntrl.emailtemplate.DELETE,Qntrl.job.READ,Qntrl.job.CREATE,Qntrl.job.UPDATE,Qntrl.job.DELETE,Qntrl.job.ALL,Qntrl.user.READ'
     };
-    // --- FIX ENDS HERE ---
+    // --- END MODIFICATION ---
     
     const requiredScope = scopes[service];
     if (!requiredScope) {
@@ -155,7 +157,8 @@ const makeApiCall = async (method, relativeUrl, data, profile, service) => {
     }
 
     const serviceConfig = profile[service];
-    if (!serviceConfig) {
+    // Check for config ONLY if the service is not qntrl (since myinfo doesn't need orgId)
+    if (!serviceConfig && service !== 'qntrl') {
          throw new Error(`Configuration for service "${service}" is missing in profile "${profile.profileName}".`);
     }
 
@@ -163,6 +166,7 @@ const makeApiCall = async (method, relativeUrl, data, profile, service) => {
         desk: 'https://desk.zoho.com',
         inventory: 'https://www.zohoapis.com/inventory',
         catalyst: 'https://api.catalyst.zoho.com',
+        qntrl: 'https://coreapi.qntrl.com'
     };
     
     const baseUrl = baseUrls[service];
@@ -175,7 +179,7 @@ const makeApiCall = async (method, relativeUrl, data, profile, service) => {
     if (service === 'desk' && serviceConfig.orgId) {
         headers['orgId'] = serviceConfig.orgId;
     }
-
+    
     const params = service === 'inventory' && serviceConfig.orgId ? { organization_id: serviceConfig.orgId } : {};
     
     const axiosConfig = {

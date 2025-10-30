@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Profile } from '@/App';
 import { useToast } from '@/hooks/use-toast';
-import { KeyRound, Loader2, Building, Briefcase, Cloud, Mail } from 'lucide-react';
+import { KeyRound, Loader2, Building, Briefcase, Cloud, Mail, Network } from 'lucide-react'; // MODIFICATION: Replaced Draft with Network
 import { Socket } from 'socket.io-client';
 import { Separator } from '../ui/separator';
 
@@ -35,7 +35,10 @@ const getInitialFormData = (): Profile => ({
   },
   catalyst: {
     projectId: '',
-    fromEmail: '', // <-- New Field
+    fromEmail: '', 
+  },
+  qntrl: {
+    orgId: '', // Changed from teamId
   },
 });
 
@@ -54,6 +57,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onS
                 desk: { ...getInitialFormData().desk, ...profile.desk },
                 inventory: { ...getInitialFormData().inventory, ...profile.inventory },
                 catalyst: { ...getInitialFormData().catalyst, ...profile.catalyst },
+                qntrl: { ...getInitialFormData().qntrl, ...profile.qntrl },
             });
         } else {
             setFormData(getInitialFormData());
@@ -89,7 +93,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onS
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleNestedChange = (service: 'desk' | 'inventory' | 'catalyst', e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNestedChange = (service: 'desk' | 'inventory' | 'catalyst' | 'qntrl', e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
         ...prev,
@@ -236,14 +240,28 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onS
                   <Label htmlFor="catalyst_projectId" className="text-right">Project ID</Label>
                   <Input id="catalyst_projectId" name="projectId" value={formData.catalyst?.projectId || ''} onChange={(e) => handleNestedChange('catalyst', e)} className="col-span-3" />
                 </div>
-                {/* --- NEW FIELD --- */}
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="catalyst_fromEmail" className="text-right">From Email</Label>
                   <Input id="catalyst_fromEmail" name="fromEmail" value={formData.catalyst?.fromEmail || ''} onChange={(e) => handleNestedChange('catalyst', e)} className="col-span-3" placeholder="(Optional) Verified sender" />
                 </div>
             </div>
           </div>
-
+          
+          {/* --- MODIFICATION HERE: ZOHO QNTRL SETTINGS --- */}
+          <Separator className="my-4" />
+          <div>
+            <h4 className="text-sm font-semibold mb-4 flex items-center">
+              <Network className="h-4 w-4 mr-2" />
+              Zoho Qntrl Settings
+            </h4>
+            <div className="grid gap-4 pl-4 border-l-2 ml-2">
+                <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="qntrl_orgId" className="text-right">Org ID</Label>
+                <Input id="qntrl_orgId" name="orgId" value={formData.qntrl?.orgId || ''} onChange={(e) => handleNestedChange('qntrl', e)} className="col-span-3" />
+                </div>
+            </div>
+          </div>
+          {/* --- END MODIFICATION --- */}
 
           <DialogFooter className="pt-8">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

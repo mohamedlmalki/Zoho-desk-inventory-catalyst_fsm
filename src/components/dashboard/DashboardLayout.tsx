@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Ticket, UserPlus, Package, BarChart3, Cloud, Users, Mail } from 'lucide-react'; 
+import { Ticket, UserPlus, Package, BarChart3, Cloud, Users, Mail, Network } from 'lucide-react'; // MODIFICATION: Added Network
 import { cn } from '@/lib/utils';
 import { ProfileSelector } from './ProfileSelector';
 import { Profile, Jobs, InvoiceJobs, CatalystJobs, EmailJobs } from '@/App'; // Adjusted imports
@@ -119,6 +119,17 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     Manage Users
                 </SidebarNavLink>
               </div>
+              
+              {/* --- MODIFICATION HERE --- */}
+              <div>
+                <h3 className="px-3 text-xs font-semibold text-foreground uppercase tracking-wider mb-2">Zoho Qntrl</h3>
+                <SidebarNavLink to="/qntrl-test">
+                  <Network className="h-4 w-4" />
+                  Test Connection
+                </SidebarNavLink>
+              </div>
+              {/* --- END MODIFICATION --- */}
+              
             </nav>
           </div>
           <div className="mt-auto p-4 border-t">
