@@ -106,6 +106,7 @@ const getValidAccessToken = async (profile, service) => {
     
     // --- MODIFICATION HERE ---
     // This list now EXACTLY matches your successful token response
+    // REVERTED: Removed ZohoCRM.modules.ALL from Qntrl scopes
     const scopes = {
         desk: 'Desk.tickets.ALL,Desk.settings.ALL,Desk.basic.READ',
         inventory: 'ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL',

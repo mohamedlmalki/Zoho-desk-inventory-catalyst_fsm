@@ -42,6 +42,7 @@ app.post('/api/zoho/auth', (req, res) => {
 
     // --- MODIFICATION HERE ---
     // This list now EXACTLY matches your successful token
+    // REVERTED: Removed ZohoCRM.modules.ALL from Qntrl scopes
     const combinedScopes = [
         'Desk.tickets.ALL,Desk.settings.ALL,Desk.basic.READ',
         'ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL,ZohoInventory.settings.UPDATE,ZohoInventory.settings.READ',
@@ -242,6 +243,7 @@ io.on('connection', (socket) => {
             }
             else if (service === 'qntrl') {
                 // This test requires Qntrl.user.READ
+                // REVERTED: Changed this endpoint back as it was also a blueprint API
                 const qntrlCheckUrl = `/blueprint/api/user/myinfo`; 
                 const myInfoResponse = await makeApiCall('get', qntrlCheckUrl, null, activeProfile, 'qntrl');
                 
