@@ -123,9 +123,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               {/* --- MODIFICATION HERE --- */}
               <div>
                 <h3 className="px-3 text-xs font-semibold text-foreground uppercase tracking-wider mb-2">Zoho Qntrl</h3>
-                <SidebarNavLink to="/qntrl-test">
+                <SidebarNavLink to="/qntrl-forms">
                   <Network className="h-4 w-4" />
-                  Test Connection
+                  Forms
                 </SidebarNavLink>
               </div>
               {/* --- END MODIFICATION --- */}

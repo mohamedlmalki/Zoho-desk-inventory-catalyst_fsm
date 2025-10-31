@@ -20,7 +20,7 @@ import SingleSignup from './pages/SingleSignup';
 import CatalystUsers from './pages/CatalystUsers';
 import BulkEmail from './pages/BulkEmail'; 
 import { EmailResult } from './components/dashboard/catalyst/EmailResultsDisplay'; 
-import QntrlTestPage from './pages/QntrlTestPage'; // --- MODIFICATION: Import new page
+import BulkQntrlCards from './pages/BulkQntrlCards'; // --- MODIFICATION: Renamed import ---
 
 const queryClient = new QueryClient();
 const SERVER_URL = "http://localhost:3000";
@@ -108,6 +108,37 @@ export interface CatalystJobState {
 export interface CatalystJobs {
     [profileName: string]: CatalystJobState;
 }
+
+// --- MODIFICATION: Added Qntrl Job Types ---
+export interface QntrlFormData {
+  emails: string;
+  title: string;
+  delay: number;
+}
+export interface QntrlResult {
+  email: string;
+  success: boolean;
+  details?: string;
+  error?: string;
+  fullResponse?: any;
+}
+export interface QntrlJobState {
+    formData: QntrlFormData;
+    results: QntrlResult[];
+    isProcessing: boolean;
+    isPaused: boolean;
+    isComplete: boolean;
+    processingStartTime: Date | null;
+    processingTime: number;
+    totalToProcess: number;
+    countdown: number;
+    currentDelay: number;
+    filterText: string;
+}
+export interface QntrlJobs {
+    [profileName: string]: QntrlJobState;
+}
+// --- END MODIFICATION ---
 
 
 export interface JobState {
@@ -253,12 +284,33 @@ const createInitialEmailJobState = (): EmailJobState => ({
     filterText: '',
 });
 
+// --- MODIFICATION: Added Qntrl Initial State ---
+const createInitialQntrlJobState = (): QntrlJobState => ({
+    formData: {
+        emails: '',
+        title: '',
+        delay: 1,
+    },
+    results: [],
+    isProcessing: false,
+    isPaused: false,
+    isComplete: false,
+    processingStartTime: null,
+    processingTime: 0,
+    totalToProcess: 0,
+    countdown: 0,
+    currentDelay: 1,
+    filterText: '',
+});
+// --- END MODIFICATION ---
+
 const MainApp = () => {
     const { toast } = useToast();
     const [jobs, setJobs] = useState<Jobs>({});
     const [invoiceJobs, setInvoiceJobs] = useState<InvoiceJobs>({});
     const [catalystJobs, setCatalystJobs] = useState<CatalystJobs>({}); 
     const [emailJobs, setEmailJobs] = useState<EmailJobs>({}); 
+    const [qntrlJobs, setQntrlJobs] = useState<QntrlJobs>({}); // --- MODIFICATION ---
     const socketRef = useRef<Socket | null>(null);
     const queryClient = useQueryClient();
 
@@ -269,6 +321,7 @@ const MainApp = () => {
     useJobTimer(invoiceJobs, setInvoiceJobs, 'invoice');
     useJobTimer(catalystJobs, setCatalystJobs, 'catalyst'); 
     useJobTimer(emailJobs, setEmailJobs, 'email'); 
+    useJobTimer(qntrlJobs, setQntrlJobs, 'qntrl'); // --- MODIFICATION ---
 
     useEffect(() => {
         const socket = io(SERVER_URL);
@@ -367,9 +420,27 @@ const MainApp = () => {
             };
           });
         });
+        
+        // --- MODIFICATION: Added Qntrl Result Listener ---
+        socket.on('qntrlResult', (result: QntrlResult & { profileName: string }) => {
+          setQntrlJobs(prevJobs => {
+            const profileJob = prevJobs[result.profileName];
+            if (!profileJob) return prevJobs;
+            const isLast = profileJob.results.length + 1 >= profileJob.totalToProcess;
+            return {
+              ...prevJobs,
+              [result.profileName]: {
+                ...profileJob,
+                results: [...profileJob.results, result],
+                countdown: isLast ? 0 : profileJob.currentDelay,
+              }
+            };
+          });
+        });
+        // --- END MODIFICATION ---
 
 
-        const handleJobCompletion = (data: {profileName: string, jobType: 'ticket' | 'invoice' | 'catalyst' | 'email'}, title: string, description: string, variant?: "destructive") => {
+        const handleJobCompletion = (data: {profileName: string, jobType: 'ticket' | 'invoice' | 'catalyst' | 'email' | 'qntrl'}, title: string, description: string, variant?: "destructive") => {
             const { profileName, jobType } = data;
             const updater = (prev: any) => {
                 if (!prev[profileName]) return prev;
@@ -384,6 +455,8 @@ const MainApp = () => {
                 setCatalystJobs(updater);
             } else if (jobType === 'email') { 
                 setEmailJobs(updater);
+            } else if (jobType === 'qntrl') { // --- MODIFICATION ---
+                setQntrlJobs(updater);
             }
             toast({ title, description, variant });
         };
@@ -563,10 +636,13 @@ const MainApp = () => {
                     
                     {/* --- MODIFICATION HERE --- */}
                     <Route
-                        path="/qntrl-test"
+                        path="/qntrl-forms" 
                         element={
-                            <QntrlTestPage
+                            <BulkQntrlCards
+                                jobs={qntrlJobs}
+                                setJobs={setQntrlJobs}
                                 socket={socketRef.current}
+                                createInitialJobState={createInitialQntrlJobState}
                                 onAddProfile={handleOpenAddProfile}
                                 onEditProfile={handleOpenEditProfile}
                                 onDeleteProfile={handleDeleteProfile}

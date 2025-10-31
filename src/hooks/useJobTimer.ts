@@ -1,15 +1,32 @@
 import { useEffect, useRef } from 'react';
-import { Jobs, InvoiceJobs } from '@/App';
+import { Jobs, InvoiceJobs, CatalystJobs, EmailJobs, QntrlJobs } from '@/App'; // --- FIX: Import all job types ---
 
-type JobState = Jobs[keyof Jobs] | InvoiceJobs[keyof InvoiceJobs];
+// --- FIX: Define a union of all possible job state types ---
+type AnyJobState = 
+    | Jobs[keyof Jobs] 
+    | InvoiceJobs[keyof InvoiceJobs] 
+    | CatalystJobs[keyof CatalystJobs] 
+    | EmailJobs[keyof EmailJobs]
+    | QntrlJobs[keyof QntrlJobs];
+
+// --- FIX: Define a union of all possible job state objects ---
+type AnyJobsState = Jobs | InvoiceJobs | CatalystJobs | EmailJobs | QntrlJobs;
+
 type SetJobsState<T> = React.Dispatch<React.SetStateAction<T>>;
 
-export function useJobTimer<T extends Jobs | InvoiceJobs>(jobsState: T, setJobsState: SetJobsState<T>, jobType: 'ticket' | 'invoice') {
+// --- FIX: Define a union of all possible job types ---
+type JobType = 'ticket' | 'invoice' | 'catalyst' | 'email' | 'qntrl';
+
+export function useJobTimer<T extends AnyJobsState>(
+    jobsState: T, 
+    setJobsState: SetJobsState<T>, 
+    jobType: JobType // --- FIX: Use the new JobType union ---
+) {
     const timersRef = useRef<{ [key: string]: { processing?: NodeJS.Timeout, countdown?: NodeJS.Timeout } }>({});
 
     // Create a dependency string based on the processing and paused status of all jobs.
     // This ensures the useEffect hook only re-runs when a job starts, stops, pauses, or resumes.
-    const jobStatuses = Object.values(jobsState as Record<string, JobState>)
+    const jobStatuses = Object.values(jobsState as Record<string, AnyJobState>)
         .map(job => `${job.isProcessing}-${job.isPaused}`)
         .join(',');
 
@@ -17,7 +34,7 @@ export function useJobTimer<T extends Jobs | InvoiceJobs>(jobsState: T, setJobsS
         const timers = timersRef.current;
 
         Object.keys(jobsState).forEach(profileName => {
-            const job = jobsState[profileName as keyof T] as JobState | undefined;
+            const job = jobsState[profileName as keyof T] as AnyJobState | undefined;
             const timerKey = `${profileName}_${jobType}`;
 
             if (!job) return;
@@ -31,6 +48,7 @@ export function useJobTimer<T extends Jobs | InvoiceJobs>(jobsState: T, setJobsS
                 timers[timerKey].processing = setInterval(() => {
                     setJobsState(prev => {
                         const currentJob = prev[profileName as keyof T];
+                        // Add safety checks for currentJob and its properties
                         if (!currentJob || !currentJob.isProcessing || currentJob.isPaused) {
                             return prev;
                         }

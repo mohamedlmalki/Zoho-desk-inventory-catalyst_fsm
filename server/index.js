@@ -7,7 +7,7 @@ const { readProfiles, writeProfiles, parseError, getValidAccessToken, makeApiCal
 const deskHandler = require('./desk-handler');
 const inventoryHandler = require('./inventory-handler');
 const catalystHandler = require('./catalyst-handler');
-const qntrlHandler = require('./qntrl-handler'); // --- MODIFICATION HERE ---
+const qntrlHandler = require('./qntrl-handler');
 require('dotenv').config();
 
 const app = express();
@@ -21,7 +21,7 @@ const activeJobs = {};
 deskHandler.setActiveJobs(activeJobs);
 inventoryHandler.setActiveJobs(activeJobs);
 catalystHandler.setActiveJobs(activeJobs);
-qntrlHandler.setActiveJobs(activeJobs); // --- MODIFICATION HERE ---
+qntrlHandler.setActiveJobs(activeJobs);
 
 const authStates = {};
 
@@ -40,16 +40,12 @@ app.post('/api/zoho/auth', (req, res) => {
 
     setTimeout(() => delete authStates[state], 300000);
 
-    // --- MODIFICATION HERE ---
-    // This list now EXACTLY matches your successful token
-    // REVERTED: Removed ZohoCRM.modules.ALL from Qntrl scopes
     const combinedScopes = [
         'Desk.tickets.ALL,Desk.settings.ALL,Desk.basic.READ',
         'ZohoInventory.contacts.ALL,ZohoInventory.invoices.ALL,ZohoInventory.settings.ALL,ZohoInventory.settings.UPDATE,ZohoInventory.settings.READ',
         'ZohoCatalyst.projects.users.CREATE,ZohoCatalyst.projects.users.READ,ZohoCatalyst.projects.users.DELETE,ZohoCatalyst.email.CREATE,ZohoCatalyst.email.CREATE',
         'Qntrl.emailalert.READ,Qntrl.emailalert.CREATE,Qntrl.emailalert.UPDATE,Qntrl.emailalert.DELETE,Qntrl.emailtemplate.READ,Qntrl.emailtemplate.CREATE,Qntrl.emailtemplate.UPDATE,Qntrl.emailtemplate.DELETE,Qntrl.job.READ,Qntrl.job.CREATE,Qntrl.job.UPDATE,Qntrl.job.DELETE,Qntrl.job.ALL,Qntrl.user.READ,Qntrl.layout.READ,Qntrl.layout.CREATE,Qntrl.layout.UPDATE,Qntrl.layout.DELETE,Qntrl.blueprint.READ,Qntrl.blueprint.CREATE,Qntrl.blueprint.UPDATE,Qntrl.stage.READ,Qntrl.stage.CREATE,Qntrl.stage.UPDATE'
     ].join(',');
-    // --- END MODIFICATION ---
     
     const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=${combinedScopes}&client_id=${clientId}&response_type=code&access_type=offline&redirect_uri=${REDIRECT_URI}&prompt=consent&state=${state}`;
     
@@ -243,7 +239,6 @@ io.on('connection', (socket) => {
             }
             else if (service === 'qntrl') {
                 // This test requires Qntrl.user.READ
-                // REVERTED: Changed this endpoint back as it was also a blueprint API
                 const qntrlCheckUrl = `/blueprint/api/user/myinfo`; 
                 const myInfoResponse = await makeApiCall('get', qntrlCheckUrl, null, activeProfile, 'qntrl');
                 
@@ -343,9 +338,11 @@ io.on('connection', (socket) => {
     }
 	
     // --- MODIFICATION HERE ---
-    // Added listeners for Qntrl
     const qntrlListeners = {
-        'getQntrlEmailTemplates': qntrlHandler.handleGetEmailTemplates,
+        'getQntrlForms': qntrlHandler.handleGetForms,
+        'getQntrlFormDetails': qntrlHandler.handleGetFormDetails,
+        'createQntrlCard': qntrlHandler.handleCreateCard,
+        'startBulkCreateCards': qntrlHandler.handleStartBulkCreateCards, // Added new event
     };
 
     for (const [event, handler] of Object.entries(qntrlListeners)) {
